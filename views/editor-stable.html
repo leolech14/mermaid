@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Visual Editor - Stable</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-void: #0F1419;
+            --bg-deep: #1A202C;
+            --bg-surface: #2D3748;
+            --bg-elevated: #4A5568;
+            
+            --text-primary: #F7FAFC;
+            --text-secondary: #E2E8F0;
+            --text-tertiary: #CBD5E0;
+            
+            --accent-primary: #B794F4;
+            --accent-secondary: #9F7AEA;
+            
+            --pastel-pink: #FED7E2;
+            --pastel-blue: #BEE3F8;
+            --pastel-green: #C6F6D5;
+            --pastel-purple: #E9D8FD;
+            --pastel-yellow: #FEFCBF;
+            --pastel-orange: #FED7AA;
+            
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.12);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-void);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+        
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-subtle);
+            min-height: 48px;
+        }
+        
+        .toolbar-left, .toolbar-center, .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+        
+        .btn--sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.813rem;
+        }
+        
+        .btn.active {
+            background: var(--accent-primary);
+            color: var(--bg-void);
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-surface);
+            overflow: hidden;
+        }
+        
+        .panel-left {
+            width: 45%;
+            min-width: 300px;
+            border-right: 1px solid var(--border-subtle);
+        }
+        
+        .panel-right {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .panel-header h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .code-editor-container {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+        
+        .code-editor {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            outline: none;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            resize: none;
+            white-space: pre;
+        }
+        
+        .visual-editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-deep);
+        }
+        
+        .mermaid-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .mermaid-diagram {
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+            padding: 2rem;
+        }
+        
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-tertiary);
+        }
+        
+        .error-state {
+            padding: 2rem;
+            text-align: center;
+            color: #FC8181;
+        }
+        
+        .node-palette {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 100%;
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+        
+        .node-palette.collapsed {
+            transform: translateX(calc(100% - 32px));
+        }
+        
+        .palette-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .palette-header h4 {
+            font-size: 0.813rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .palette-content {
+            flex: 1;
+            padding: 0.5rem;
+            overflow-y: auto;
+        }
+        
+        .node-type {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 6px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .node-type:hover {
+            background: var(--bg-elevated);
+            border-color: var(--border-default);
+        }
+        
+        .node-type:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+        
+        .node-icon {
+            font-size: 1.125rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .node-label {
+            font-size: 0.813rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.375rem 1rem;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border-subtle);
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        
+        .status-left, .status-center, .status-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .resizer {
+            width: 4px;
+            background: var(--border-subtle);
+            cursor: col-resize;
+            position: relative;
+            transition: background 0.2s ease;
+        }
+        
+        .resizer:hover {
+            background: var(--accent-primary);
+        }
+        
+        .resizer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -2px;
+            right: -2px;
+            bottom: 0;
+        }
+        
+        .context-menu {
+            position: fixed;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+        
+        .context-menu-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        
+        .context-menu-item:hover {
+            background: var(--bg-elevated);
+            color: var(--accent-primary);
+        }
+        
+        .show-grid {
+            background-image: 
+                linear-gradient(rgba(183, 148, 244, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(183, 148, 244, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .panel-left {
+                width: 100%;
+                height: 40%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-subtle);
+            }
+            
+            .resizer {
+                height: 4px;
+                width: 100%;
+                cursor: row-resize;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="toolbar">
+            <div class="toolbar-left">
+                <div class="logo">
+                    <span>✨ Mermaid Editor</span>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn btn--sm" onclick="newDiagram()" title="New Diagram">
+                        📄 New
+                    </button>
+                    <button class="btn btn--sm" onclick="openFile()" title="Open">
+                        📁 Open
+                    </button>
+                    <button class="btn btn--sm" onclick="saveDiagram()" title="Save">
+                        💾 Save
+                    </button>
+                    <button class="btn btn--sm" onclick="undo()" title="Undo" id="undoBtn">
+                        ↶
+                    </button>
+                    <button class="btn btn--sm" onclick="redo()" title="Redo" id="redoBtn">
+                        ↷
+                    </button>
+                </div>
+            </div>
+            
+            <div class="toolbar-center">
+                <select class="btn btn--sm" id="diagramType" onchange="changeDiagramType()">
+                    <option value="graph">Flowchart</option>
+                    <option value="sequenceDiagram">Sequence</option>
+                    <option value="classDiagram">Class</option>
+                    <option value="stateDiagram">State</option>
+                    <option value="journey">Journey</option>
+                </select>
+            </div>
+            
+            <div class="toolbar-right">
+                <button class="btn btn--sm" onclick="exportSVG()" title="Export SVG">
+                    📤 Export
+                </button>
+                <button class="btn btn--sm" onclick="toggleGrid()" title="Toggle Grid" id="gridBtn">
+                    ⊞ Grid
+                </button>
+                <button class="btn btn--sm" onclick="formatCode()" title="Format Code">
+                    🎨 Format
+                </button>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <div class="panel panel-left" id="leftPanel">
+                <div class="panel-header">
+                    <h3>Mermaid Code</h3>
+                    <div class="panel-controls">
+                        <button class="btn btn--sm" onclick="copyCode()" title="Copy Code">
+                            📋
+                        </button>
+                    </div>
+                </div>
+                <div class="code-editor-container">
+                    <textarea 
+                        id="codeEditor" 
+                        class="code-editor" 
+                        placeholder="Start typing your Mermaid diagram code..."
+                        oninput="onCodeChange()"
+                        spellcheck="false">graph TD
+    A[Start] --> B{Decision?}
+    B -->|Yes| C[OK]
+    C --> D[Rethink]
+    D --> B
+    B -->|No| E[End]</textarea>
+                </div>
+            </div>
+            
+            <div class="resizer" id="resizer"></div>
+            
+            <div class="panel panel-right" id="rightPanel">
+                <div class="panel-header">
+                    <h3>Visual Editor</h3>
+                    <div class="panel-controls">
+                        <button class="btn btn--sm" onclick="zoomIn()" title="Zoom In">
+                            🔍+
+                        </button>
+                        <button class="btn btn--sm" onclick="zoomOut()" title="Zoom Out">
+                            🔍-
+                        </button>
+                        <button class="btn btn--sm" onclick="resetZoom()" title="Reset Zoom">
+                            ⌂
+                        </button>
+                    </div>
+                </div>
+                <div class="visual-editor-container">
+                    <div id="mermaidContainer" class="mermaid-container">
+                        <div id="mermaidDiagram" class="mermaid-diagram"></div>
+                    </div>
+                    
+                    <div class="node-palette" id="nodePalette">
+                        <div class="palette-header">
+                            <h4>Node Types</h4>
+                            <button class="btn btn--sm" onclick="togglePalette()" id="paletteToggle">
+                                ◀
+                            </button>
+                        </div>
+                        <div class="palette-content">
+                            <div class="node-type" draggable="true" data-type="rectangle" title="Process">
+                                <span class="node-icon">□</span>
+                                <span class="node-label">Process</span>
+                            </div>
+                            <div class="node-type" draggable="true" data-type="diamond" title="Decision">
+                                <span class="node-icon">◇</span>
+                                <span class="node-label">Decision</span>
+                            </div>
+                            <div class="node-type" draggable="true" data-type="circle" title="Start/End">
+                                <span class="node-icon">○</span>
+                                <span class="node-label">Start/End</span>
+                            </div>
+                            <div class="node-type" draggable="true" data-type="parallelogram" title="Input/Output">
+                                <span class="node-icon">▱</span>
+                                <span class="node-label">Input/Output</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="statusText">Ready</span>
+                <span class="separator">|</span>
+                <span id="modeIndicator">Visual Mode</span>
+            </div>
+            <div class="status-center">
+                <span id="diagramInfo">Flowchart • 5 nodes • 4 connections</span>
+            </div>
+            <div class="status-right">
+                <span id="zoomLevel">100%</span>
+                <span class="separator">|</span>
+                <span id="lastSaved">Auto-saved 2 minutes ago</span>
+            </div>
+        </footer>
+    </div>
+    
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="editNode()">Edit Node</div>
+        <div class="context-menu-item" onclick="deleteNode()">Delete Node</div>
+        <div class="context-menu-item" onclick="addConnection()">Add Connection</div>
+    </div>
+    
+    <script>
+        class MermaidEditor {
+            constructor() {
+                this.currentCode = '';
+                this.history = [];
+                this.historyIndex = -1;
+                this.zoom = 1;
+                this.showGrid = false;
+                this.updateTimeout = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupMermaid();
+                this.setupEventListeners();
+                this.loadFromStorage();
+                this.setupDragAndDrop();
+                this.setupResizer();
+                
+                setTimeout(() => {
+                    this.updateDiagram();
+                }, 100);
+            }
+            
+            setupMermaid() {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'dark',
+                    themeVariables: {
+                        primaryColor: '#2D3748',
+                        primaryTextColor: '#F7FAFC',
+                        primaryBorderColor: '#B794F4',
+                        lineColor: '#FBB6CE',
+                        secondaryColor: '#90CDF4',
+                        tertiaryColor: '#9AE6B4',
+                        background: '#1A202C',
+                        mainBkg: '#2D3748',
+                        secondBkg: '#4A5568',
+                        tertiaryBkg: '#718096',
+                        primaryBoxBkg: '#2D3748',
+                        primaryBoxBorder: '#B794F4',
+                        nodeBkg: '#2D3748',
+                        nodeTextColor: '#F7FAFC',
+                        fontSize: '16px',
+                        fontFamily: 'Inter, system-ui, sans-serif'
+                    },
+                    flowchart: {
+                        useMaxWidth: false,
+                        htmlLabels: true,
+                        curve: 'linear'
+                    }
+                });
+            }
+            
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+                
+                const codeEditor = document.getElementById('codeEditor');
+                codeEditor.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = codeEditor.selectionStart;
+                        const end = codeEditor.selectionEnd;
+                        codeEditor.value = codeEditor.value.substring(0, start) + '    ' + codeEditor.value.substring(end);
+                        codeEditor.selectionStart = codeEditor.selectionEnd = start + 4;
+                    }
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.context-menu')) {
+                        document.getElementById('contextMenu').style.display = 'none';
+                    }
+                });
+            }
+            
+            setupDragAndDrop() {
+                const nodeTypes = document.querySelectorAll('.node-type');
+                const mermaidContainer = document.getElementById('mermaidContainer');
+                
+                nodeTypes.forEach(nodeType => {
+                    nodeType.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', nodeType.dataset.type);
+                        nodeType.classList.add('dragging');
+                    });
+                    
+                    nodeType.addEventListener('dragend', () => {
+                        nodeType.classList.remove('dragging');
+                    });
+                });
+                
+                mermaidContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    mermaidContainer.classList.add('drag-over');
+                });
+                
+                mermaidContainer.addEventListener('dragleave', () => {
+                    mermaidContainer.classList.remove('drag-over');
+                });
+                
+                mermaidContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    mermaidContainer.classList.remove('drag-over');
+                    
+                    const nodeType = e.dataTransfer.getData('text/plain');
+                    this.addNodeToCode(nodeType);
+                });
+            }
+            
+            setupResizer() {
+                const resizer = document.getElementById('resizer');
+                let isResizing = false;
+                
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    document.addEventListener('mousemove', handleResize);
+                    document.addEventListener('mouseup', stopResize);
+                });
+                
+                const handleResize = (e) => {
+                    if (!isResizing) return;
+                    
+                    const container = document.querySelector('.main-content');
+                    const leftPanel = document.getElementById('leftPanel');
+                    const percentage = ((e.clientX - container.offsetLeft) / container.offsetWidth) * 100;
+                    
+                    if (percentage > 20 && percentage < 80) {
+                        leftPanel.style.width = `${percentage}%`;
+                    }
+                };
+                
+                const stopResize = () => {
+                    isResizing = false;
+                    document.removeEventListener('mousemove', handleResize);
+                    document.removeEventListener('mouseup', stopResize);
+                };
+            }
+            
+            handleKeyboard(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key.toLowerCase()) {
+                        case 'z':
+                            e.preventDefault();
+                            this.undo();
+                            break;
+                        case 'y':
+                            e.preventDefault();
+                            this.redo();
+                            break;
+                        case 's':
+                            e.preventDefault();
+                            this.saveDiagram();
+                            break;
+                        case 'n':
+                            e.preventDefault();
+                            this.newDiagram();
+                            break;
+                        case '=':
+                        case '+':
+                            e.preventDefault();
+                            this.zoomIn();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            this.zoomOut();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            this.resetZoom();
+                            break;
+                    }
+                }
+            }
+            
+            addToHistory(code) {
+                this.history = this.history.slice(0, this.historyIndex + 1);
+                this.history.push(code);
+                this.historyIndex++;
+                
+                if (this.history.length > 50) {
+                    this.history.shift();
+                    this.historyIndex--;
+                }
+                
+                this.updateUndoRedoButtons();
+            }
+            
+            updateUndoRedoButtons() {
+                const undoBtn = document.getElementById('undoBtn');
+                const redoBtn = document.getElementById('redoBtn');
+                
+                if (undoBtn) undoBtn.disabled = this.historyIndex <= 0;
+                if (redoBtn) redoBtn.disabled = this.historyIndex >= this.history.length - 1;
+            }
+            
+            updateDiagram() {
+                const codeEditor = document.getElementById('codeEditor');
+                if (!codeEditor) return;
+                
+                const code = codeEditor.value;
+                if (code === this.currentCode) return;
+                
+                this.currentCode = code;
+                this.renderDiagram(code);
+                this.saveToStorage();
+            }
+            
+            async renderDiagram(code) {
+                const diagramContainer = document.getElementById('mermaidDiagram');
+                if (!diagramContainer) return;
+                
+                if (!code.trim()) {
+                    diagramContainer.innerHTML = '<div class="empty-state">Start typing your Mermaid diagram code...</div>';
+                    return;
+                }
+                
+                try {
+                    diagramContainer.innerHTML = '';
+                    const diagramId = `mermaid-${Date.now()}`;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.visibility = 'hidden';
+                    tempDiv.style.position = 'absolute';
+                    document.body.appendChild(tempDiv);
+                    
+                    const { svg } = await mermaid.render(diagramId, code, tempDiv);
+                    
+                    document.body.removeChild(tempDiv);
+                    
+                    diagramContainer.innerHTML = svg;
+                    this.applyZoom();
+                    this.updateDiagramInfo(code);
+                    this.showStatus('Diagram updated');
+                    
+                } catch (error) {
+                    console.error('Mermaid rendering error:', error);
+                    diagramContainer.innerHTML = `
+                        <div class="error-state">
+                            <h3>Syntax Error</h3>
+                            <p>${error.message || 'Invalid Mermaid syntax'}</p>
+                        </div>
+                    `;
+                    this.showStatus('Syntax error in diagram', 'error');
+                }
+            }
+            
+            updateDiagramInfo(code) {
+                const diagramInfo = document.getElementById('diagramInfo');
+                if (!diagramInfo) return;
+                
+                const lines = code.split('\n').filter(line => line.trim());
+                const nodes = lines.filter(line => line.includes('[') || line.includes('(')).length;
+                const connections = lines.filter(line => line.includes('-->')).length;
+                
+                diagramInfo.textContent = `Flowchart • ${nodes} nodes • ${connections} connections`;
+            }
+            
+            applyZoom() {
+                const diagram = document.getElementById('mermaidDiagram');
+                const zoomLevel = document.getElementById('zoomLevel');
+                
+                if (diagram) {
+                    diagram.style.transform = `scale(${this.zoom})`;
+                }
+                if (zoomLevel) {
+                    zoomLevel.textContent = `${Math.round(this.zoom * 100)}%`;
+                }
+            }
+            
+            addNodeToCode(nodeType) {
+                const codeEditor = document.getElementById('codeEditor');
+                const currentCode = codeEditor.value;
+                
+                const nodeId = `node${Date.now()}`;
+                const nodeText = `New ${nodeType}`;
+                
+                let nodeCode = '';
+                switch(nodeType) {
+                    case 'rectangle':
+                        nodeCode = `    ${nodeId}[${nodeText}]`;
+                        break;
+                    case 'diamond':
+                        nodeCode = `    ${nodeId}{${nodeText}}`;
+                        break;
+                    case 'circle':
+                        nodeCode = `    ${nodeId}((${nodeText}))`;
+                        break;
+                    case 'parallelogram':
+                        nodeCode = `    ${nodeId}[/${nodeText}/]`;
+                        break;
+                }
+                
+                if (currentCode.trim() === '') {
+                    codeEditor.value = `graph TD\n${nodeCode}`;
+                } else {
+                    codeEditor.value = currentCode + '\n' + nodeCode;
+                }
+                
+                this.addToHistory(codeEditor.value);
+                this.updateDiagram();
+                this.showStatus(`Added ${nodeType} node`);
+            }
+            
+            showStatus(message, type = 'info') {
+                const statusText = document.getElementById('statusText');
+                if (!statusText) return;
+                
+                statusText.textContent = message;
+                statusText.className = `status--${type}`;
+                
+                setTimeout(() => {
+                    statusText.textContent = 'Ready';
+                    statusText.className = '';
+                }, 3000);
+            }
+            
+            saveToStorage() {
+                const codeEditor = document.getElementById('codeEditor');
+                if (!codeEditor) return;
+                
+                const code = codeEditor.value;
+                localStorage.setItem('mermaid-editor-content', code);
+                localStorage.setItem('mermaid-editor-last-saved', new Date().toISOString());
+                
+                const lastSavedElement = document.getElementById('lastSaved');
+                if (lastSavedElement) {
+                    lastSavedElement.textContent = 'Auto-saved just now';
+                }
+            }
+            
+            loadFromStorage() {
+                const saved = localStorage.getItem('mermaid-editor-content');
+                const codeEditor = document.getElementById('codeEditor');
+                
+                if (saved && codeEditor) {
+                    codeEditor.value = saved;
+                    this.currentCode = saved;
+                    this.addToHistory(saved);
+                }
+                
+                const lastSaved = localStorage.getItem('mermaid-editor-last-saved');
+                const lastSavedElement = document.getElementById('lastSaved');
+                
+                if (lastSaved && lastSavedElement) {
+                    const time = new Date(lastSaved);
+                    const now = new Date();
+                    const diffMinutes = Math.floor((now - time) / (1000 * 60));
+                    
+                    if (diffMinutes < 1) {
+                        lastSavedElement.textContent = 'Auto-saved just now';
+                    } else if (diffMinutes < 60) {
+                        lastSavedElement.textContent = `Auto-saved ${diffMinutes} minutes ago`;
+                    } else {
+                        lastSavedElement.textContent = `Auto-saved ${Math.floor(diffMinutes / 60)} hours ago`;
+                    }
+                }
+            }
+            
+            zoomIn() {
+                this.zoom = Math.min(this.zoom * 1.2, 3);
+                this.applyZoom();
+            }
+            
+            zoomOut() {
+                this.zoom = Math.max(this.zoom * 0.8, 0.3);
+                this.applyZoom();
+            }
+            
+            resetZoom() {
+                this.zoom = 1;
+                this.applyZoom();
+            }
+        }
+        
+        // Global editor instance
+        let editor;
+        
+        // Global functions
+        function initializeEditor() {
+            editor = new MermaidEditor();
+        }
+        
+        function onCodeChange() {
+            if (!editor) return;
+            
+            const codeEditor = document.getElementById('codeEditor');
+            if (!codeEditor) return;
+            
+            const code = codeEditor.value;
+            
+            if (Math.abs(code.length - editor.currentCode.length) > 5 || 
+                Date.now() - editor.lastHistoryAdd > 5000) {
+                editor.addToHistory(code);
+                editor.lastHistoryAdd = Date.now();
+            }
+            
+            clearTimeout(editor.updateTimeout);
+            editor.updateTimeout = setTimeout(() => {
+                editor.updateDiagram();
+            }, 500);
+        }
+        
+        function newDiagram() {
+            if (editor && confirm('Create new diagram? Unsaved changes will be lost.')) {
+                const codeEditor = document.getElementById('codeEditor');
+                if (codeEditor) {
+                    const newCode = 'graph TD\n    A[Start] --> B[End]';
+                    codeEditor.value = newCode;
+                    editor.addToHistory(newCode);
+                    editor.updateDiagram();
+                    editor.showStatus('New diagram created');
+                }
+            }
+        }
+        
+        function saveDiagram() {
+            if (editor) {
+                editor.saveToStorage();
+                editor.showStatus('Diagram saved');
+            }
+        }
+        
+        function exportSVG() {
+            const svg = document.querySelector('#mermaidDiagram svg');
+            if (svg) {
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mermaid-diagram-${Date.now()}.svg`;
+                a.click();
+                URL.revokeObjectURL(url);
+                if (editor) editor.showStatus('Diagram exported');
+            }
+        }
+        
+        function undo() {
+            if (editor) editor.undo();
+        }
+        
+        function redo() {
+            if (editor) editor.redo();
+        }
+        
+        function zoomIn() {
+            if (editor) editor.zoomIn();
+        }
+        
+        function zoomOut() {
+            if (editor) editor.zoomOut();
+        }
+        
+        function resetZoom() {
+            if (editor) editor.resetZoom();
+        }
+        
+        function toggleGrid() {
+            if (!editor) return;
+            
+            const mermaidContainer = document.getElementById('mermaidContainer');
+            const gridBtn = document.getElementById('gridBtn');
+            
+            editor.showGrid = !editor.showGrid;
+            
+            if (mermaidContainer && gridBtn) {
+                if (editor.showGrid) {
+                    mermaidContainer.classList.add('show-grid');
+                    gridBtn.classList.add('active');
+                } else {
+                    mermaidContainer.classList.remove('show-grid');
+                    gridBtn.classList.remove('active');
+                }
+            }
+        }
+        
+        function formatCode() {
+            if (!editor) return;
+            
+            const codeEditor = document.getElementById('codeEditor');
+            if (!codeEditor) return;
+            
+            let code = codeEditor.value;
+            const lines = code.split('\n');
+            const formatted = lines.map(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('graph') || trimmed.startsWith('sequenceDiagram') || trimmed.startsWith('classDiagram')) {
+                    return trimmed;
+                } else if (trimmed) {
+                    return '    ' + trimmed;
+                }
+                return trimmed;
+            });
+            
+            codeEditor.value = formatted.join('\n');
+            editor.addToHistory(codeEditor.value);
+            editor.updateDiagram();
+            editor.showStatus('Code formatted');
+        }
+        
+        function copyCode() {
+            const codeEditor = document.getElementById('codeEditor');
+            if (codeEditor) {
+                navigator.clipboard.writeText(codeEditor.value).then(() => {
+                    if (editor) editor.showStatus('Code copied to clipboard');
+                });
+            }
+        }
+        
+        function openFile() {
+            if (editor) editor.showStatus('File open feature coming soon');
+        }
+        
+        function togglePalette() {
+            const palette = document.getElementById('nodePalette');
+            const toggle = document.getElementById('paletteToggle');
+            
+            if (palette && toggle) {
+                palette.classList.toggle('collapsed');
+                toggle.innerHTML = palette.classList.contains('collapsed') ? '▶' : '◀';
+            }
+        }
+        
+        function changeDiagramType() {
+            if (editor) editor.showStatus('Diagram type templates coming soon');
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeEditor();
+        });
+    </script>
+</body>
+</html>

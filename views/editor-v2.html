@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Visual Editor v2 - Hybrid Canvas</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    
+    <style>
+        /* Dark Theme with Pastel Colors */
+        :root {
+            --bg-void: #0F1419;
+            --bg-deep: #1A202C;
+            --bg-surface: #2D3748;
+            --bg-elevated: #4A5568;
+            
+            --text-primary: #F7FAFC;
+            --text-secondary: #E2E8F0;
+            --text-tertiary: #CBD5E0;
+            
+            --accent-primary: #B794F4;
+            --accent-secondary: #9F7AEA;
+            --accent-glow: rgba(183, 148, 244, 0.3);
+            
+            /* Pastel colors for nodes */
+            --pastel-pink: #FED7E2;
+            --pastel-pink-dark: #F687B3;
+            --pastel-blue: #BEE3F8;
+            --pastel-blue-dark: #63B3ED;
+            --pastel-green: #C6F6D5;
+            --pastel-green-dark: #68D391;
+            --pastel-purple: #E9D8FD;
+            --pastel-purple-dark: #B794F4;
+            --pastel-yellow: #FEFCBF;
+            --pastel-yellow-dark: #F6E05E;
+            --pastel-orange: #FED7AA;
+            --pastel-orange-dark: #F6AD55;
+            
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.12);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-void);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+        
+        /* App Container */
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-deep);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        
+        .header-left, .header-center, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--pastel-purple), var(--pastel-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(183, 148, 244, 0.2);
+        }
+        
+        .btn-icon {
+            font-size: 1rem;
+        }
+        
+        .btn.active {
+            background: var(--accent-primary);
+            color: var(--bg-void);
+            border-color: var(--accent-primary);
+        }
+        
+        /* Mode Tabs */
+        .mode-tabs {
+            display: flex;
+            background: var(--bg-surface);
+            padding: 2px;
+            border-radius: 10px;
+            gap: 2px;
+        }
+        
+        .mode-tab {
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .mode-tab:hover {
+            color: var(--text-secondary);
+        }
+        
+        .mode-tab.active {
+            background: var(--bg-elevated);
+            color: var(--accent-primary);
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background: var(--bg-void);
+        }
+        
+        /* Panels */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .code-panel {
+            background: var(--bg-deep);
+            border-right: 1px solid var(--border-subtle);
+        }
+        
+        .visual-panel {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, var(--bg-deep) 0%, var(--bg-void) 100%);
+        }
+        
+        .panel-header {
+            background: var(--bg-surface);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .panel-header h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+        
+        /* Code Editor */
+        .code-editor {
+            flex: 1;
+            padding: 1rem;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            border: none;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+        
+        .code-editor:focus {
+            background: #1A202C;
+        }
+        
+        /* Visual Canvas */
+        .visual-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: auto;
+        }
+        
+        .canvas-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(var(--zoom, 1));
+            transition: transform 0.3s ease;
+        }
+        
+        .mermaid-output {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+        }
+        
+        /* Node Palette */
+        .node-palette {
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 12px;
+            padding: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+        }
+        
+        .palette-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .node-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .node-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-deep);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+        
+        .node-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(4px);
+        }
+        
+        .node-item:active {
+            cursor: grabbing;
+            opacity: 0.8;
+            transform: scale(0.95);
+        }
+        
+        .node-icon {
+            width: 40px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+        }
+        
+        .node-process { background: var(--pastel-blue); color: var(--bg-void); }
+        .node-decision { 
+            background: var(--pastel-yellow); 
+            color: var(--bg-void);
+            transform: rotate(45deg);
+        }
+        .node-decision span { transform: rotate(-45deg); }
+        .node-start { background: var(--pastel-green); color: var(--bg-void); border-radius: 50%; }
+        .node-data { background: var(--pastel-orange); color: var(--bg-void); transform: skewX(-20deg); }
+        .node-data span { transform: skewX(20deg); }
+        
+        .node-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        /* Toolbar */
+        .visual-toolbar {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            background: var(--bg-surface);
+            padding: 0.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .toolbar-btn:hover {
+            background: var(--bg-elevated);
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-deep);
+            border-top: 1px solid var(--border-subtle);
+            padding: 0.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        
+        .status-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--pastel-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Grid Background */
+        .show-grid .visual-canvas {
+            background-image: 
+                linear-gradient(rgba(183, 148, 244, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(183, 148, 244, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        /* Mode-specific styles */
+        .code-mode .visual-panel { display: none; }
+        .visual-mode .code-panel { display: none; }
+        .dual-mode .code-panel { width: 45%; }
+        
+        /* Drag feedback */
+        .drag-over {
+            background: rgba(183, 148, 244, 0.1);
+            border: 2px dashed var(--accent-primary);
+            border-radius: 8px;
+        }
+        
+        .dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        
+        /* Context menu */
+        .context-menu {
+            position: fixed;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            padding: 0.5rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .context-menu-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+        
+        .context-menu-item:hover {
+            background: var(--bg-elevated);
+            color: var(--accent-primary);
+        }
+        
+        /* Loading state */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-tertiary);
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">✨ Mermaid Canvas</div>
+                <button class="btn" onclick="newDiagram()">
+                    <span class="btn-icon">📄</span> New
+                </button>
+                <button class="btn" onclick="saveDiagram()">
+                    <span class="btn-icon">💾</span> Save
+                </button>
+            </div>
+            
+            <div class="header-center">
+                <div class="mode-tabs">
+                    <button class="mode-tab active" onclick="setMode('dual')">Dual</button>
+                    <button class="mode-tab" onclick="setMode('code')">Code</button>
+                    <button class="mode-tab" onclick="setMode('visual')">Visual</button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button class="btn" onclick="exportDiagram()">
+                    <span class="btn-icon">📤</span> Export
+                </button>
+                <button class="btn" onclick="toggleTheme()">
+                    <span class="btn-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="main-content dual-mode" id="mainContent">
+            <!-- Code Panel -->
+            <div class="panel code-panel">
+                <div class="panel-header">
+                    <h3>Mermaid Code</h3>
+                    <button class="btn" onclick="formatCode()" style="padding: 0.25rem 0.75rem;">
+                        Format
+                    </button>
+                </div>
+                <textarea id="codeEditor" class="code-editor" placeholder="Start typing your Mermaid code..." oninput="onCodeChange()">graph TD
+    A[Start] -->|Initialize| B{Ready?}
+    B -->|Yes| C[Process Data]
+    B -->|No| D[Wait]
+    C --> E[Transform]
+    E --> F[Validate]
+    F -->|Success| G[Complete]
+    F -->|Error| H[Retry]
+    H --> C
+    D --> B
+
+    style A fill:#C6F6D5,stroke:#68D391,stroke-width:2px
+    style G fill:#C6F6D5,stroke:#68D391,stroke-width:2px
+    style B fill:#FEFCBF,stroke:#F6E05E,stroke-width:2px
+    style H fill:#FED7E2,stroke:#F687B3,stroke-width:2px</textarea>
+            </div>
+            
+            <!-- Visual Panel -->
+            <div class="panel visual-panel">
+                <div class="visual-canvas" id="visualCanvas">
+                    <div class="canvas-container">
+                        <div id="mermaidOutput" class="mermaid-output"></div>
+                    </div>
+                    
+                    <!-- Node Palette -->
+                    <div class="node-palette">
+                        <div class="palette-title">Drag & Drop Nodes</div>
+                        <div class="node-items">
+                            <div class="node-item" draggable="true" data-type="process">
+                                <div class="node-icon node-process">A</div>
+                                <span class="node-label">Process</span>
+                            </div>
+                            <div class="node-item" draggable="true" data-type="decision">
+                                <div class="node-icon node-decision"><span>?</span></div>
+                                <span class="node-label">Decision</span>
+                            </div>
+                            <div class="node-item" draggable="true" data-type="start">
+                                <div class="node-icon node-start">●</div>
+                                <span class="node-label">Start/End</span>
+                            </div>
+                            <div class="node-item" draggable="true" data-type="data">
+                                <div class="node-icon node-data"><span>D</span></div>
+                                <span class="node-label">Data</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Visual Toolbar -->
+                    <div class="visual-toolbar">
+                        <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">🔍+</button>
+                        <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">🔍-</button>
+                        <button class="toolbar-btn" onclick="resetZoom()" title="Reset Zoom">⊡</button>
+                        <button class="toolbar-btn" onclick="toggleGrid()" title="Toggle Grid">⊞</button>
+                        <button class="toolbar-btn" onclick="autoLayout()" title="Auto Layout">📐</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-section">
+                <div class="status-item">
+                    <span class="status-indicator"></span>
+                    <span id="status">Ready</span>
+                </div>
+                <div class="status-item">
+                    <span id="nodeCount">6 nodes</span>
+                </div>
+                <div class="status-item">
+                    <span id="renderMode">SVG Mode</span>
+                </div>
+            </div>
+            <div class="status-section">
+                <div class="status-item">
+                    <span id="zoom">100%</span>
+                </div>
+                <div class="status-item">
+                    <span>Auto-save: On</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="editNode()">Edit Node</div>
+        <div class="context-menu-item" onclick="deleteNode()">Delete Node</div>
+        <div class="context-menu-item" onclick="addConnection()">Add Connection</div>
+    </div>
+    
+    <script>
+        // Initialize Mermaid with dark theme
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#2D3748',
+                primaryTextColor: '#F7FAFC',
+                primaryBorderColor: '#B794F4',
+                lineColor: '#FBB6CE',
+                secondaryColor: '#90CDF4',
+                tertiaryColor: '#9AE6B4',
+                background: '#1A202C',
+                mainBkg: '#2D3748',
+                secondBkg: '#4A5568',
+                tertiaryBkg: '#718096',
+                primaryBoxBkg: '#2D3748',
+                primaryBoxBorder: '#B794F4',
+                nodeBkg: '#2D3748',
+                nodeTextColor: '#F7FAFC',
+                fontSize: '18px',
+                fontFamily: 'Inter, system-ui, sans-serif'
+            }
+        });
+        
+        // State
+        let currentMode = 'dual';
+        let zoomLevel = 1;
+        let showGrid = false;
+        let selectedNode = null;
+        let renderTimeout = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderDiagram();
+            setupDragAndDrop();
+            setupKeyboardShortcuts();
+            loadAutoSave();
+        });
+        
+        // Render diagram
+        function renderDiagram() {
+            const code = document.getElementById('codeEditor').value;
+            const output = document.getElementById('mermaidOutput');
+            
+            if (!code.trim()) {
+                output.innerHTML = '<div class="loading">Start typing to see your diagram...</div>';
+                return;
+            }
+            
+            // Clear previous timeout
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+            }
+            
+            // Debounce rendering
+            renderTimeout = setTimeout(async () => {
+                try {
+                    const { svg } = await mermaid.render('mermaid-diagram', code);
+                    output.innerHTML = svg;
+                    updateStatus('Rendered successfully');
+                    updateNodeCount();
+                    autoSave();
+                } catch (error) {
+                    output.innerHTML = `<div style="color: #F687B3; padding: 2rem;">Error: ${error.message}</div>`;
+                    updateStatus('Syntax error');
+                }
+            }, 500);
+        }
+        
+        // Code change handler
+        function onCodeChange() {
+            renderDiagram();
+        }
+        
+        // Mode switching
+        function setMode(mode) {
+            currentMode = mode;
+            const mainContent = document.getElementById('mainContent');
+            mainContent.className = `main-content ${mode}-mode`;
+            
+            // Update tab states
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        // Zoom controls
+        function zoomIn() {
+            zoomLevel = Math.min(zoomLevel * 1.2, 3);
+            updateZoom();
+        }
+        
+        function zoomOut() {
+            zoomLevel = Math.max(zoomLevel / 1.2, 0.3);
+            updateZoom();
+        }
+        
+        function resetZoom() {
+            zoomLevel = 1;
+            updateZoom();
+        }
+        
+        function updateZoom() {
+            document.querySelector('.canvas-container').style.setProperty('--zoom', zoomLevel);
+            document.getElementById('zoom').textContent = Math.round(zoomLevel * 100) + '%';
+        }
+        
+        // Grid toggle
+        function toggleGrid() {
+            showGrid = !showGrid;
+            const canvas = document.querySelector('.visual-canvas');
+            canvas.classList.toggle('show-grid', showGrid);
+        }
+        
+        // Drag and drop
+        function setupDragAndDrop() {
+            const nodeItems = document.querySelectorAll('.node-item');
+            const visualCanvas = document.getElementById('visualCanvas');
+            
+            nodeItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('nodeType', item.dataset.type);
+                    item.classList.add('dragging');
+                });
+                
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                });
+            });
+            
+            visualCanvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                visualCanvas.classList.add('drag-over');
+            });
+            
+            visualCanvas.addEventListener('dragleave', () => {
+                visualCanvas.classList.remove('drag-over');
+            });
+            
+            visualCanvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                visualCanvas.classList.remove('drag-over');
+                
+                const nodeType = e.dataTransfer.getData('nodeType');
+                const rect = visualCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                addNodeToCode(nodeType, x, y);
+            });
+        }
+        
+        // Add node to code
+        function addNodeToCode(type, x, y) {
+            const codeEditor = document.getElementById('codeEditor');
+            const nodeId = `N${Date.now().toString(36)}`;
+            let nodeCode = '';
+            
+            switch(type) {
+                case 'process':
+                    nodeCode = `    ${nodeId}[New Process]`;
+                    break;
+                case 'decision':
+                    nodeCode = `    ${nodeId}{Decision?}`;
+                    break;
+                case 'start':
+                    nodeCode = `    ${nodeId}((Start/End))`;
+                    break;
+                case 'data':
+                    nodeCode = `    ${nodeId}[/Data/]`;
+                    break;
+            }
+            
+            // Add to code
+            const lines = codeEditor.value.split('\n');
+            const insertIndex = lines.findIndex(line => line.includes('style')) || lines.length;
+            lines.splice(insertIndex, 0, nodeCode);
+            
+            codeEditor.value = lines.join('\n');
+            renderDiagram();
+            
+            updateStatus(`Added ${type} node`);
+        }
+        
+        // Status updates
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+        
+        function updateNodeCount() {
+            const code = document.getElementById('codeEditor').value;
+            const nodeMatches = code.match(/\w+\[|\w+\{|\w+\(/g) || [];
+            document.getElementById('nodeCount').textContent = `${nodeMatches.length} nodes`;
+        }
+        
+        // Auto layout
+        function autoLayout() {
+            updateStatus('Auto-layout applied');
+            // In a real implementation, this would reorganize the diagram
+        }
+        
+        // Format code
+        function formatCode() {
+            const codeEditor = document.getElementById('codeEditor');
+            const lines = codeEditor.value.split('\n');
+            
+            const formatted = lines.map(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('graph') || trimmed.startsWith('style')) {
+                    return trimmed;
+                } else if (trimmed) {
+                    return '    ' + trimmed;
+                }
+                return '';
+            }).filter(line => line !== '');
+            
+            codeEditor.value = formatted.join('\n');
+            renderDiagram();
+            updateStatus('Code formatted');
+        }
+        
+        // Export diagram
+        function exportDiagram() {
+            const svg = document.querySelector('#mermaidOutput svg');
+            if (!svg) {
+                updateStatus('No diagram to export');
+                return;
+            }
+            
+            // Create blob and download
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mermaid-diagram-${Date.now()}.svg`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            updateStatus('Diagram exported');
+        }
+        
+        // Save/Load
+        function saveDiagram() {
+            const code = document.getElementById('codeEditor').value;
+            localStorage.setItem('mermaid-editor-v2-code', code);
+            updateStatus('Diagram saved');
+        }
+        
+        function loadAutoSave() {
+            const saved = localStorage.getItem('mermaid-editor-v2-code');
+            if (saved) {
+                document.getElementById('codeEditor').value = saved;
+                renderDiagram();
+            }
+        }
+        
+        function autoSave() {
+            saveDiagram();
+        }
+        
+        // New diagram
+        function newDiagram() {
+            if (confirm('Create new diagram? Unsaved changes will be lost.')) {
+                document.getElementById('codeEditor').value = `graph TD
+    A[Start] --> B[Process]
+    B --> C[End]`;
+                renderDiagram();
+                updateStatus('New diagram created');
+            }
+        }
+        
+        // Keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case 's':
+                            e.preventDefault();
+                            saveDiagram();
+                            break;
+                        case 'n':
+                            e.preventDefault();
+                            newDiagram();
+                            break;
+                        case '=':
+                        case '+':
+                            e.preventDefault();
+                            zoomIn();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            zoomOut();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            resetZoom();
+                            break;
+                    }
+                }
+            });
+        }
+        
+        // Theme toggle (placeholder)
+        function toggleTheme() {
+            updateStatus('Theme toggle coming soon');
+        }
+    </script>
+</body>
+</html>
