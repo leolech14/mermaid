@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mermaid Visual Editor - Create beautiful diagrams with code and visual editing">
+    <title>Mermaid Visual Editor</title>
+    <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+    <div id="app">
+        <div class="editor-container">
+            <!-- Header -->
+            <header class="editor-header">
+                <div class="header-left">
+                    <h1 class="logo">
+                        <span class="logo-icon">⬡</span>
+                        Mermaid Editor
+                    </h1>
+                </div>
+                <div class="header-center">
+                    <div class="tab-group">
+                        <button class="tab active" data-mode="dual">Dual Mode</button>
+                        <button class="tab" data-mode="code">Code Only</button>
+                        <button class="tab" data-mode="visual">Visual Only</button>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-icon" title="Settings">⚙️</button>
+                    <button class="btn btn-icon" title="Help">❓</button>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="editor-main">
+                <div id="editor-root"></div>
+            </main>
+
+            <!-- Status Bar -->
+            <footer class="editor-footer">
+                <div class="status-left">
+                    <span id="status-mode">Dual Mode</span>
+                    <span class="separator">•</span>
+                    <span id="status-info">Ready</span>
+                </div>
+                <div class="status-right">
+                    <span id="status-performance">60 fps</span>
+                    <span class="separator">•</span>
+                    <span id="status-save">Saved</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module">
+        import { MermaidEditor } from '/src/core/editor.js';
+        
+        // Initialize editor
+        const editor = new MermaidEditor('editor-root', {
+            mode: 'dual',
+            theme: 'dark',
+            enableTouch: true,
+            autoSave: true
+        });
+        
+        // Handle tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                editor.setMode(e.target.dataset.mode);
+                document.getElementById('status-mode').textContent = `${e.target.textContent}`;
+            });
+        });
+        
+        // Performance monitoring
+        let lastTime = performance.now();
+        let frames = 0;
+        
+        function updateFPS() {
+            frames++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                const fps = Math.round((frames * 1000) / (currentTime - lastTime));
+                document.getElementById('status-performance').textContent = `${fps} fps`;
+                frames = 0;
+                lastTime = currentTime;
+            }
+            requestAnimationFrame(updateFPS);
+        }
+        updateFPS();
+    </script>
+</body>
+</html>

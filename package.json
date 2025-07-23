@@ -1,0 +1,46 @@
+{
+  "name": "mermaid-visual-editor",
+  "version": "1.0.0",
+  "description": "Hybrid Mermaid Visual Editor - Combining code and visual editing with balanced architecture",
+  "main": "dist/mermaid-editor.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "eslint src/**/*.js",
+    "format": "prettier --write src/**/*.{js,css,html}"
+  },
+  "keywords": [
+    "mermaid",
+    "diagram",
+    "editor",
+    "visual",
+    "flowchart",
+    "canvas",
+    "svg"
+  ],
+  "author": "Leo Lech",
+  "license": "MIT",
+  "dependencies": {
+    "mermaid": "^10.6.1",
+    "mobx": "^6.12.0",
+    "prismjs": "^1.29.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-legacy": "^5.2.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leolech14/mermaid.git"
+  },
+  "bugs": {
+    "url": "https://github.com/leolech14/mermaid/issues"
+  },
+  "homepage": "https://github.com/leolech14/mermaid#readme"
+}
