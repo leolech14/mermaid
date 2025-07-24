@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Editor V2 - Integrated Edition</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- V2 CSS -->
+    <link rel="stylesheet" href="dist/mermaid-editor-v2.bundle.css">
+    
+    <style>
+        /* Enhanced integration styles */
+        :root {
+            --color-background: #0F1419;
+            --color-surface-1: #1A202C;
+            --color-surface-2: #2D3748;
+            --color-surface-3: #4A5568;
+            --color-primary: #B794F4;
+            --color-secondary: #90CDF4;
+            --color-accent: #FBB6CE;
+            --color-success: #9AE6B4;
+            --color-warning: #F6E05E;
+            --color-error: #FC8181;
+            --color-text: #F7FAFC;
+            --color-text-secondary: #E2E8F0;
+            --color-text-muted: #A0AEC0;
+        }
+        
+        #app {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            background: var(--color-background);
+        }
+        
+        .initialization-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .initialization-status {
+            text-align: center;
+            color: var(--color-text-secondary);
+        }
+        
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .status-message {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .status-detail {
+            font-size: 14px;
+            color: var(--color-text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <!-- Initialization overlay -->
+    <div class="initialization-overlay" id="initOverlay">
+        <div class="initialization-status">
+            <div class="status-icon">🚀</div>
+            <div class="status-message">Initializing Mermaid Editor V2</div>
+            <div class="status-detail" id="statusDetail">Loading modules...</div>
+        </div>
+    </div>
+    
+    <!-- Load dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="dist/mermaid-editor-v2.bundle.js"></script>
+    
+    <!-- Enhanced initialization with interactive features -->
+    <script>
+        (async function() {
+            'use strict';
+            
+            const initOverlay = document.getElementById('initOverlay');
+            const statusDetail = document.getElementById('statusDetail');
+            
+            function updateStatus(message) {
+                statusDetail.textContent = message;
+            }
+            
+            function hideInitOverlay() {
+                initOverlay.style.opacity = '0';
+                setTimeout(() => initOverlay.remove(), 500);
+            }
+            
+            async function initializeIntegratedEditor() {
+                try {
+                    updateStatus('Checking modules...');
+                    
+                    // Verify modules loaded
+                    if (!window.MermaidEditorV2) {
+                        throw new Error('V2 modules not loaded. Please run build script.');
+                    }
+                    
+                    updateStatus('Initializing Mermaid.js...');
+                    
+                    // Initialize Mermaid
+                    mermaid.initialize({
+                        startOnLoad: false,
+                        theme: 'dark',
+                        themeVariables: {
+                            primaryColor: '#B794F4',
+                            primaryTextColor: '#F7FAFC',
+                            primaryBorderColor: '#B794F4',
+                            lineColor: '#FBB6CE',
+                            secondaryColor: '#90CDF4',
+                            background: '#2D3748',
+                            mainBkg: '#2D3748',
+                            secondBkg: '#4A5568'
+                        }
+                    });
+                    
+                    updateStatus('Creating editor instance...');
+                    
+                    // Get container
+                    const container = document.getElementById('app');
+                    if (!container) {
+                        throw new Error('App container not found');
+                    }
+                    
+                    // Create editor with all features enabled
+                    const { MermaidEditor } = window.MermaidEditorV2;
+                    const editor = new MermaidEditor(container, {
+                        theme: 'dark',
+                        features: {
+                            nestedCanvas: true,
+                            xrayVision: true,
+                            connectionFlow: true,
+                            aiPersonalization: false
+                        },
+                        performance: {
+                            targetFPS: 60,
+                            reducedMotion: false
+                        }
+                    });
+                    
+                    // Store globally for debugging
+                    window.mermaidEditor = editor;
+                    
+                    updateStatus('Loading interactive features...');
+                    
+                    // Load the V2 interactive features module
+                    if (window.MermaidEditorV2.V2InteractiveFeatures) {
+                        const interactiveFeatures = new window.MermaidEditorV2.V2InteractiveFeatures(editor);
+                        editor.interactiveFeatures = interactiveFeatures;
+                    }
+                    
+                    updateStatus('Setting up event listeners...');
+                    
+                    // Wait for editor ready
+                    await new Promise(resolve => {
+                        editor.eventBus.once('editor:ready', resolve);
+                        
+                        // Timeout fallback
+                        setTimeout(resolve, 1000);
+                    });
+                    
+                    updateStatus('Loading initial diagram...');
+                    
+                    // Load a simple initial diagram
+                    const initialDiagram = {
+                        nodes: [
+                            {
+                                id: 'start',
+                                type: 'start',
+                                label: 'Start',
+                                position: { x: 100, y: 100 },
+                                size: { width: 120, height: 60 }
+                            },
+                            {
+                                id: 'process1',
+                                type: 'process',
+                                label: 'Process',
+                                position: { x: 300, y: 100 },
+                                size: { width: 120, height: 60 }
+                            }
+                        ],
+                        connections: [
+                            {
+                                id: 'conn1',
+                                from: 'start',
+                                to: 'process1',
+                                label: 'Begin'
+                            }
+                        ]
+                    };
+                    
+                    // Only load if loadDiagram exists
+                    if (editor.loadDiagram) {
+                        editor.loadDiagram(initialDiagram);
+                    }
+                    
+                    updateStatus('Editor ready!');
+                    
+                    // Hide overlay
+                    hideInitOverlay();
+                    
+                    // Show welcome message
+                    console.log('✅ Mermaid Editor V2 Integrated Edition ready!');
+                    console.log('Tips:');
+                    console.log('- Right-click canvas to create nodes');
+                    console.log('- Left-click node + right-click another to connect');
+                    console.log('- Drag nodes to move them');
+                    console.log('- Alt+X for X-ray vision');
+                    console.log('- Space+drag to pan canvas');
+                    
+                } catch (error) {
+                    console.error('Initialization failed:', error);
+                    
+                    initOverlay.innerHTML = `
+                        <div class="initialization-status">
+                            <div class="status-icon">❌</div>
+                            <div class="status-message" style="color: var(--color-error);">
+                                Initialization Error
+                            </div>
+                            <div class="status-detail">
+                                ${error.message}
+                            </div>
+                            <div style="margin-top: 20px; font-size: 14px;">
+                                Please check the console for details.
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Start initialization when DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeIntegratedEditor);
+            } else {
+                initializeIntegratedEditor();
+            }
+            
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+/**
+ * Nodes - Node component styles for the visual editor
+ */
+
+/* ============================================
+   NODE GROUP
+   ============================================ */
+.node-group {
+    cursor: move;
+    transition: filter var(--transition-fast);
+}
+
+.node-group:hover {
+    filter: brightness(1.1);
+}
+
+.node-group.selected {
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.node-group.selecting {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.node-group.dragging {
+    cursor: grabbing;
+    opacity: 0.9;
+}
+
+/* ============================================
+   NODE SHAPES
+   ============================================ */
+.node-shape {
+    transition: all var(--transition-fast);
+}
+
+.node-shape:hover {
+    filter: brightness(1.2);
+}
+
+/* Node Colors */
+.node-shape.node-color-blue {
+    fill: var(--pastel-blue);
+    stroke: var(--pastel-blue-dark);
+}
+
+.node-shape.node-color-green {
+    fill: var(--pastel-green);
+    stroke: var(--pastel-green-dark);
+}
+
+.node-shape.node-color-purple {
+    fill: var(--pastel-purple);
+    stroke: var(--pastel-purple-dark);
+}
+
+.node-shape.node-color-yellow {
+    fill: var(--pastel-yellow);
+    stroke: var(--pastel-yellow-dark);
+}
+
+.node-shape.node-color-orange {
+    fill: var(--pastel-orange);
+    stroke: var(--pastel-orange-dark);
+}
+
+.node-shape.node-color-pink {
+    fill: var(--pastel-pink);
+    stroke: var(--pastel-pink-dark);
+}
+
+/* ============================================
+   NODE TEXT
+   ============================================ */
+.node-text {
+    pointer-events: none;
+    user-select: none;
+    fill: var(--text-primary);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+/* ============================================
+   CONNECTION POINTS
+   ============================================ */
+.connection-point {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    cursor: crosshair;
+}
+
+.node-group:hover .connection-point {
+    opacity: 0.3;
+}
+
+.connection-point:hover {
+    opacity: 1 !important;
+}
+
+.connection-point.top {
+    transform: translateY(-2px);
+}
+
+.connection-point.bottom {
+    transform: translateY(2px);
+}
+
+.connection-point.left {
+    transform: translateX(-2px);
+}
+
+.connection-point.right {
+    transform: translateX(2px);
+}
+
+/* ============================================
+   RESIZE HANDLES
+   ============================================ */
+.resize-handle {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.node-group.selected:hover .resize-handle {
+    opacity: 0.5;
+}
+
+.resize-handle:hover {
+    opacity: 1 !important;
+}
+
+/* Resize Handle Positions */
+.resize-handle.resize-nw { cursor: nw-resize; }
+.resize-handle.resize-n  { cursor: n-resize; }
+.resize-handle.resize-ne { cursor: ne-resize; }
+.resize-handle.resize-w  { cursor: w-resize; }
+.resize-handle.resize-e  { cursor: e-resize; }
+.resize-handle.resize-sw { cursor: sw-resize; }
+.resize-handle.resize-s  { cursor: s-resize; }
+.resize-handle.resize-se { cursor: se-resize; }
+
+/* ============================================
+   NODE STATES
+   ============================================ */
+.node-group.error .node-shape {
+    stroke: var(--color-error);
+    stroke-width: 3px;
+}
+
+.node-group.warning .node-shape {
+    stroke: var(--color-warning);
+    stroke-width: 3px;
+}
+
+.node-group.success .node-shape {
+    stroke: var(--color-success);
+    stroke-width: 3px;
+}
+
+.node-group.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.node-group.disabled:hover {
+    filter: none;
+}
+
+/* ============================================
+   NODE BADGES
+   ============================================ */
+.node-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--color-error);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.node-badge.badge-warning {
+    background: var(--color-warning);
+    color: var(--bg-void);
+}
+
+.node-badge.badge-success {
+    background: var(--color-success);
+    color: var(--bg-void);
+}
+
+.node-badge.badge-info {
+    background: var(--color-info);
+}
+
+/* ============================================
+   NODE ANIMATIONS
+   ============================================ */
+@keyframes nodeAdd {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.node-group.node-adding {
+    animation: nodeAdd 0.3s ease-out;
+}
+
+@keyframes nodePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.node-group.node-pulse {
+    animation: nodePulse 0.6s ease-in-out;
+}

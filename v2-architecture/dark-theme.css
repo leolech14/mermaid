@@ -1,0 +1,708 @@
+/**
+ * Dark Theme for Mermaid Editor V2
+ * Based on modern UI/UX principles with glass morphism and smooth animations
+ */
+
+/* ============================================
+   CSS Variables - Dark Theme Foundation
+   ============================================ */
+:root {
+    /* Base colors - Avoid pure black for better readability */
+    --bg-void: #0F1419;
+    --bg-primary: #121212;
+    --bg-secondary: #1A202C;
+    --bg-elevated: #2D3748;
+    --bg-hover: #4A5568;
+    
+    /* Surface colors with elevation */
+    --surface-0: #1A202C;
+    --surface-1: #2D3748;
+    --surface-2: #4A5568;
+    --surface-3: #718096;
+    
+    /* Pastel accent palette */
+    --accent-purple: #B794F4;
+    --accent-purple-dark: #9F7AEA;
+    --accent-pink: #FBB6CE;
+    --accent-blue: #90CDF4;
+    --accent-green: #9AE6B4;
+    --accent-yellow: #F6E05E;
+    --accent-orange: #FBB86C;
+    
+    /* Text colors with proper contrast */
+    --text-primary: #F7FAFC;
+    --text-secondary: #E2E8F0;
+    --text-muted: #A0AEC0;
+    --text-disabled: #718096;
+    
+    /* Semantic colors */
+    --color-success: #9AE6B4;
+    --color-warning: #F6E05E;
+    --color-error: #FC8181;
+    --color-info: #90CDF4;
+    
+    /* Glass morphism properties */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --glass-blur: blur(10px) saturate(180%);
+    
+    /* Spacing scale (1.25 ratio) */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.25rem;
+    --spacing-xl: 1.563rem;
+    --spacing-2xl: 1.953rem;
+    --spacing-3xl: 2.441rem;
+    
+    /* Animation durations */
+    --transition-fast: 150ms;
+    --transition-base: 300ms;
+    --transition-slow: 500ms;
+    
+    /* Z-index scale */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    
+    /* Typography scale */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'Fira Code', 'SF Mono', Monaco, monospace;
+    
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    
+    /* Border radius */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
+}
+
+/* ============================================
+   Global Styles
+   ============================================ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--bg-void);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Add subtle texture */
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(183, 148, 244, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(144, 205, 244, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(251, 182, 206, 0.03) 0%, transparent 50%);
+    
+    /* Subtle noise texture at 3% opacity */
+    position: relative;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Force pixel-perfect rendering */
+.pixel-perfect {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* ============================================
+   Glass Morphism Components
+   ============================================ */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    
+    /* Inner glow */
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+}
+
+/* ============================================
+   Main Editor Layout
+   ============================================ */
+.editor-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+    z-index: 2; /* Above noise texture */
+}
+
+/* Top Toolbar */
+.toolbar {
+    height: 56px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--spacing-lg);
+    gap: var(--spacing-md);
+    z-index: var(--z-sticky);
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-md);
+}
+
+/* Tool Buttons */
+.tool-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.tool-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.tool-btn.active {
+    background: var(--accent-purple);
+    color: var(--bg-primary);
+    box-shadow: 0 0 20px rgba(183, 148, 244, 0.4);
+}
+
+.tool-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--accent-purple);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 8px var(--accent-purple);
+}
+
+/* ============================================
+   Canvas Area
+   ============================================ */
+.canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-void);
+    
+    /* Grid pattern */
+    background-image: 
+        linear-gradient(var(--bg-secondary) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-secondary) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: -1px -1px;
+}
+
+.canvas-svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+.canvas-svg.grabbing {
+    cursor: grabbing;
+}
+
+/* ============================================
+   Nodes Styling
+   ============================================ */
+.node-group {
+    cursor: move;
+    transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.node-rect {
+    fill: var(--bg-elevated);
+    stroke: var(--accent-purple);
+    stroke-width: 2;
+    rx: 8;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    transition: all var(--transition-fast);
+}
+
+.node-group:hover .node-rect {
+    fill: var(--surface-1);
+    stroke: var(--accent-purple-dark);
+    filter: drop-shadow(0 6px 12px rgba(183, 148, 244, 0.3));
+}
+
+.node-group.selected .node-rect {
+    stroke: var(--accent-pink);
+    stroke-width: 3;
+    filter: drop-shadow(0 8px 16px rgba(251, 182, 206, 0.4));
+}
+
+/* Node type variations */
+.node-type-decision .node-rect {
+    stroke: var(--accent-blue);
+}
+
+.node-type-process .node-rect {
+    stroke: var(--accent-green);
+}
+
+.node-type-data .node-rect {
+    stroke: var(--accent-yellow);
+}
+
+/* Nested canvas indicator */
+.node-has-canvas::after {
+    content: '▼';
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-size: 10px;
+    color: var(--accent-purple);
+    opacity: 0.6;
+}
+
+/* ============================================
+   Connections Styling
+   ============================================ */
+.connection-path {
+    stroke: var(--accent-purple);
+    stroke-width: 2;
+    fill: none;
+    transition: all var(--transition-fast);
+}
+
+.connection-path:hover {
+    stroke-width: 3;
+    filter: drop-shadow(0 0 8px var(--accent-purple));
+}
+
+.connection-path.selected {
+    stroke: var(--accent-pink);
+    stroke-width: 3;
+}
+
+/* Arrow markers */
+.arrow-marker {
+    fill: var(--accent-purple);
+}
+
+/* Connection preview during creation */
+.connection-preview {
+    animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -100;
+    }
+}
+
+/* Connection creation states */
+.connection-source {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.connection-target {
+    opacity: 0.7;
+}
+
+.connection-target-active {
+    opacity: 1;
+    animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 rgba(183, 148, 244, 0));
+    }
+    50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 20px rgba(183, 148, 244, 0.6));
+    }
+}
+
+/* ============================================
+   Context Menus
+   ============================================ */
+.context-menu {
+    position: fixed;
+    min-width: 200px;
+    padding: var(--spacing-sm);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 
+        var(--glass-shadow),
+        0 0 40px rgba(183, 148, 244, 0.1);
+    z-index: var(--z-popover);
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+    transition: all var(--transition-fast) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.context-menu.active {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.context-menu-item:hover {
+    background: var(--accent-purple);
+    color: var(--bg-primary);
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: var(--glass-border);
+    margin: var(--spacing-xs) 0;
+}
+
+/* ============================================
+   Property Panels
+   ============================================ */
+.property-panel {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    width: 320px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+    padding: var(--spacing-lg);
+    transform: translateX(340px);
+    transition: transform var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.property-panel.active {
+    transform: translateX(0);
+}
+
+/* Form elements */
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-label {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-fast);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 3px rgba(183, 148, 244, 0.2);
+}
+
+/* ============================================
+   X-Ray Vision Mode
+   ============================================ */
+.xray-mode-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: rgba(183, 148, 244, 0.1);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(183, 148, 244, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--accent-purple);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    z-index: var(--z-tooltip);
+    animation: xrayPulse 2s ease-in-out infinite;
+}
+
+@keyframes xrayPulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(183, 148, 244, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(183, 148, 244, 0.6);
+    }
+}
+
+.xray-canvas-container {
+    position: absolute;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(183, 148, 244, 0.3);
+    border-radius: var(--radius-lg);
+    box-shadow: 
+        0 8px 32px rgba(31, 38, 135, 0.15),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+    transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   Zoom Controls
+   ============================================ */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+}
+
+.zoom-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.zoom-btn:hover {
+    background: var(--accent-purple);
+    color: var(--bg-primary);
+    border-color: var(--accent-purple);
+}
+
+/* ============================================
+   Node Palette
+   ============================================ */
+.node-palette {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    width: 80px;
+    padding: var(--spacing-md);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+}
+
+.palette-item {
+    width: 60px;
+    height: 60px;
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    border: 2px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    cursor: grab;
+    transition: all var(--transition-fast);
+}
+
+.palette-item:hover {
+    border-color: var(--accent-purple);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(183, 148, 244, 0.3);
+}
+
+.palette-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+/* ============================================
+   Selection Box
+   ============================================ */
+.selection-box {
+    fill: rgba(183, 148, 244, 0.1);
+    stroke: var(--accent-purple);
+    stroke-width: 1;
+    stroke-dasharray: 5, 5;
+    animation: dash 20s linear infinite;
+}
+
+/* ============================================
+   Tooltips
+   ============================================ */
+.tooltip {
+    position: absolute;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all var(--transition-fast);
+    z-index: var(--z-tooltip);
+}
+
+.tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Smooth scrolling */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-purple);
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+    outline: 2px solid var(--accent-purple);
+    outline-offset: 2px;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

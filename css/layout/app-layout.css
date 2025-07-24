@@ -1,0 +1,161 @@
+/**
+ * App Layout - Main application layout structure
+ */
+
+/* ============================================
+   APP CONTAINER
+   ============================================ */
+.app-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: var(--bg-deep);
+}
+
+/* ============================================
+   EDITOR CONTAINER
+   ============================================ */
+.editor-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+.editor-split {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* ============================================
+   CODE EDITOR
+   ============================================ */
+.code-editor-container {
+    width: 400px;
+    min-width: 200px;
+    max-width: 50%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+}
+
+.code-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    min-height: 40px;
+}
+
+.code-editor-header h3 {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+}
+
+.code-editor {
+    flex: 1;
+    padding: var(--spacing-md);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-loose);
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: none;
+    outline: none;
+    resize: none;
+    overflow-y: auto;
+}
+
+/* ============================================
+   VISUAL EDITOR
+   ============================================ */
+.visual-editor-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-deep);
+}
+
+#editor-canvas {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: auto;
+}
+
+#svg-container {
+    width: 100%;
+    height: 100%;
+    min-width: 1000px;
+    min-height: 800px;
+}
+
+/* ============================================
+   SPLITTER
+   ============================================ */
+.splitter {
+    width: 4px;
+    background: var(--bg-elevated);
+    cursor: col-resize;
+    position: relative;
+    transition: background-color var(--transition-fast);
+}
+
+.splitter:hover {
+    background: var(--accent-primary);
+}
+
+.splitter::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: var(--border-default);
+    border-radius: var(--radius-full);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .editor-split {
+        flex-direction: column;
+    }
+    
+    .code-editor-container {
+        width: 100%;
+        max-width: 100%;
+        height: 300px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .splitter {
+        width: 100%;
+        height: 4px;
+        cursor: row-resize;
+    }
+    
+    .splitter::before {
+        width: 40px;
+        height: 2px;
+    }
+}

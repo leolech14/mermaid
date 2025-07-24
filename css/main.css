@@ -1,0 +1,177 @@
+/**
+ * Main CSS - Imports all modular CSS files
+ * 
+ * ARCHITECTURE:
+ * - Base: Variables, reset, typography
+ * - Layout: App structure, toolbar, panels
+ * - Components: Reusable UI components
+ * - Editor: Editor-specific styles
+ * - Utils: Utility classes
+ */
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+@import url('base/variables.css');
+@import url('base/reset.css');
+
+/* ============================================
+   LAYOUT STYLES
+   ============================================ */
+@import url('layout/app-layout.css');
+@import url('layout/toolbar.css');
+
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+@import url('components/buttons.css');
+@import url('components/nodes.css');
+@import url('components/connections.css');
+@import url('components/editor.css');
+
+/* ============================================
+   MODAL STYLES (already separate)
+   ============================================ */
+@import url('../js/ui/modalStyles.css');
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Display */
+.hidden { display: none !important; }
+.invisible { visibility: hidden !important; }
+.block { display: block !important; }
+.inline-block { display: inline-block !important; }
+.flex { display: flex !important; }
+
+/* Flexbox */
+.flex-row { flex-direction: row !important; }
+.flex-col { flex-direction: column !important; }
+.items-center { align-items: center !important; }
+.items-start { align-items: flex-start !important; }
+.items-end { align-items: flex-end !important; }
+.justify-center { justify-content: center !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-around { justify-content: space-around !important; }
+.flex-1 { flex: 1 !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.gap-xs { gap: var(--spacing-xs) !important; }
+.gap-sm { gap: var(--spacing-sm) !important; }
+.gap-md { gap: var(--spacing-md) !important; }
+.gap-lg { gap: var(--spacing-lg) !important; }
+
+/* Spacing */
+.m-0 { margin: 0 !important; }
+.m-xs { margin: var(--spacing-xs) !important; }
+.m-sm { margin: var(--spacing-sm) !important; }
+.m-md { margin: var(--spacing-md) !important; }
+.m-lg { margin: var(--spacing-lg) !important; }
+.mt-xs { margin-top: var(--spacing-xs) !important; }
+.mt-sm { margin-top: var(--spacing-sm) !important; }
+.mt-md { margin-top: var(--spacing-md) !important; }
+.mt-lg { margin-top: var(--spacing-lg) !important; }
+.mb-xs { margin-bottom: var(--spacing-xs) !important; }
+.mb-sm { margin-bottom: var(--spacing-sm) !important; }
+.mb-md { margin-bottom: var(--spacing-md) !important; }
+.mb-lg { margin-bottom: var(--spacing-lg) !important; }
+
+.p-0 { padding: 0 !important; }
+.p-xs { padding: var(--spacing-xs) !important; }
+.p-sm { padding: var(--spacing-sm) !important; }
+.p-md { padding: var(--spacing-md) !important; }
+.p-lg { padding: var(--spacing-lg) !important; }
+
+/* Text */
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-base) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
+.text-xl { font-size: var(--font-size-xl) !important; }
+.text-2xl { font-size: var(--font-size-2xl) !important; }
+
+.text-primary { color: var(--text-primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-tertiary { color: var(--text-tertiary) !important; }
+.text-accent { color: var(--accent-primary) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-error { color: var(--color-error) !important; }
+
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+
+.font-normal { font-weight: var(--font-weight-normal) !important; }
+.font-medium { font-weight: var(--font-weight-medium) !important; }
+.font-semibold { font-weight: var(--font-weight-semibold) !important; }
+.font-bold { font-weight: var(--font-weight-bold) !important; }
+
+/* Background */
+.bg-void { background-color: var(--bg-void) !important; }
+.bg-deep { background-color: var(--bg-deep) !important; }
+.bg-surface { background-color: var(--bg-surface) !important; }
+.bg-elevated { background-color: var(--bg-elevated) !important; }
+
+/* Border */
+.border { border: 1px solid var(--border-default) !important; }
+.border-subtle { border: 1px solid var(--border-subtle) !important; }
+.border-strong { border: 1px solid var(--border-strong) !important; }
+.border-0 { border: none !important; }
+.rounded-sm { border-radius: var(--radius-sm) !important; }
+.rounded-md { border-radius: var(--radius-md) !important; }
+.rounded-lg { border-radius: var(--radius-lg) !important; }
+.rounded-xl { border-radius: var(--radius-xl) !important; }
+.rounded-full { border-radius: var(--radius-full) !important; }
+
+/* Shadow */
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+.shadow-xl { box-shadow: var(--shadow-xl) !important; }
+.shadow-2xl { box-shadow: var(--shadow-2xl) !important; }
+.shadow-none { box-shadow: none !important; }
+
+/* Position */
+.relative { position: relative !important; }
+.absolute { position: absolute !important; }
+.fixed { position: fixed !important; }
+.sticky { position: sticky !important; }
+
+/* Overflow */
+.overflow-hidden { overflow: hidden !important; }
+.overflow-auto { overflow: auto !important; }
+.overflow-x-auto { overflow-x: auto !important; }
+.overflow-y-auto { overflow-y: auto !important; }
+
+/* Width/Height */
+.w-full { width: 100% !important; }
+.h-full { height: 100% !important; }
+.min-w-0 { min-width: 0 !important; }
+.min-h-0 { min-height: 0 !important; }
+
+/* Cursor */
+.cursor-pointer { cursor: pointer !important; }
+.cursor-default { cursor: default !important; }
+.cursor-move { cursor: move !important; }
+.cursor-not-allowed { cursor: not-allowed !important; }
+
+/* User Select */
+.select-none { user-select: none !important; }
+.select-text { user-select: text !important; }
+.select-all { user-select: all !important; }
+
+/* Transitions */
+.transition-none { transition: none !important; }
+.transition-all { transition: all var(--transition-base) !important; }
+.transition-fast { transition: all var(--transition-fast) !important; }
+.transition-slow { transition: all var(--transition-slow) !important; }
+
+/* Z-Index */
+.z-0 { z-index: var(--z-base) !important; }
+.z-10 { z-index: var(--z-dropdown) !important; }
+.z-20 { z-index: var(--z-sticky) !important; }
+.z-30 { z-index: var(--z-overlay) !important; }
+.z-40 { z-index: var(--z-modal) !important; }
+.z-50 { z-index: var(--z-popover) !important; }
+.z-60 { z-index: var(--z-tooltip) !important; }

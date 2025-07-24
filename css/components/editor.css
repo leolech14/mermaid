@@ -1,0 +1,241 @@
+/**
+ * Editor - Visual editor specific styles
+ */
+
+/* ============================================
+   SVG CANVAS
+   ============================================ */
+#svg-container {
+    background-color: var(--bg-deep);
+    background-image: 
+        linear-gradient(var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    background-position: -1px -1px;
+}
+
+#svg-container.hide-grid {
+    background-image: none;
+}
+
+/* Dark mode grid pattern */
+#svg-container.grid-dots {
+    background-image: radial-gradient(circle, var(--border-subtle) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+}
+
+/* ============================================
+   SELECTION BOX
+   ============================================ */
+.selection-box {
+    fill: rgba(183, 148, 244, 0.1);
+    stroke: var(--accent-primary);
+    stroke-width: 1px;
+    stroke-dasharray: 5, 5;
+    pointer-events: none;
+}
+
+/* ============================================
+   CURSOR STATES
+   ============================================ */
+#editor-canvas {
+    cursor: default;
+    user-select: none;
+}
+
+#editor-canvas.tool-select {
+    cursor: default;
+}
+
+#editor-canvas.tool-node {
+    cursor: crosshair;
+}
+
+#editor-canvas.tool-connection {
+    cursor: crosshair;
+}
+
+#editor-canvas.tool-pan {
+    cursor: grab;
+}
+
+#editor-canvas.tool-pan.panning {
+    cursor: grabbing;
+}
+
+/* Ensure SVG doesn't block events */
+#svg-container {
+    pointer-events: auto;
+}
+
+#svg-container * {
+    pointer-events: auto;
+}
+
+/* Node drag states */
+.node-type[draggable="true"] {
+    cursor: grab;
+}
+
+.node-type[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* ============================================
+   ZOOM CONTROLS
+   ============================================ */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xs);
+    box-shadow: var(--shadow-lg);
+}
+
+.zoom-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.zoom-btn:hover {
+    background: var(--accent-primary);
+    color: var(--bg-void);
+    border-color: var(--accent-primary);
+}
+
+.zoom-level {
+    text-align: center;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    padding: var(--spacing-xs) 0;
+    min-width: 50px;
+}
+
+/* ============================================
+   MINIMAP
+   ============================================ */
+.minimap {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    height: 150px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    opacity: 0.8;
+    transition: opacity var(--transition-fast);
+}
+
+.minimap:hover {
+    opacity: 1;
+}
+
+.minimap-viewport {
+    position: absolute;
+    border: 2px solid var(--accent-primary);
+    background: rgba(183, 148, 244, 0.1);
+    cursor: move;
+}
+
+/* ============================================
+   TOOLBAR FLOATING
+   ============================================ */
+.toolbar-floating {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: var(--spacing-xs);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm);
+    box-shadow: var(--shadow-xl);
+    z-index: var(--z-sticky);
+}
+
+/* ============================================
+   STATUS BAR
+   ============================================ */
+.status-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-md);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+}
+
+.status-bar-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.status-bar-separator {
+    width: 1px;
+    height: 16px;
+    background: var(--border-subtle);
+    margin: 0 var(--spacing-sm);
+}
+
+/* ============================================
+   TOOLTIPS
+   ============================================ */
+.tooltip {
+    position: absolute;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    z-index: var(--z-tooltip);
+}
+
+.tooltip.show {
+    opacity: 1;
+}
+
+.tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: var(--bg-elevated);
+    border-right: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--border-default);
+}

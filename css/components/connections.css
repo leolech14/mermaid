@@ -1,0 +1,212 @@
+/**
+ * Connections - Connection/arrow styles for the visual editor
+ */
+
+/* ============================================
+   CONNECTION PATHS
+   ============================================ */
+.connection-path {
+    fill: none;
+    stroke: var(--pastel-pink-dark);
+    stroke-width: 2px;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.connection-path:hover {
+    stroke-width: 3px;
+    filter: brightness(1.2);
+}
+
+.connection-path.selected {
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+}
+
+.connection-path.selecting {
+    opacity: 0.8;
+    stroke-width: 3px;
+}
+
+/* ============================================
+   CONNECTION STYLES
+   ============================================ */
+
+/* Line Styles */
+.connection-path.style-dashed {
+    stroke-dasharray: 5, 5;
+}
+
+.connection-path.style-dotted {
+    stroke-dasharray: 2, 2;
+}
+
+/* Animated Connections */
+.connection-path.animated {
+    stroke-dasharray: 5, 10;
+    animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -100;
+    }
+}
+
+/* ============================================
+   CONNECTION COLORS
+   ============================================ */
+.connection-path.color-blue {
+    stroke: var(--pastel-blue-dark);
+}
+
+.connection-path.color-green {
+    stroke: var(--pastel-green-dark);
+}
+
+.connection-path.color-purple {
+    stroke: var(--pastel-purple-dark);
+}
+
+.connection-path.color-yellow {
+    stroke: var(--pastel-yellow-dark);
+}
+
+.connection-path.color-orange {
+    stroke: var(--pastel-orange-dark);
+}
+
+.connection-path.color-pink {
+    stroke: var(--pastel-pink-dark);
+}
+
+/* ============================================
+   CONNECTION LABELS
+   ============================================ */
+.connection-label {
+    fill: var(--text-primary);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    user-select: none;
+}
+
+.connection-label-bg {
+    fill: var(--bg-surface);
+    stroke: var(--border-default);
+    stroke-width: 1px;
+    rx: 4;
+    ry: 4;
+}
+
+/* ============================================
+   ARROW MARKERS
+   ============================================ */
+.arrow-marker {
+    fill: var(--pastel-pink-dark);
+    transition: fill var(--transition-fast);
+}
+
+/* Arrow marker colors should match connection colors */
+.connection-path.color-blue ~ defs .arrow-marker {
+    fill: var(--pastel-blue-dark);
+}
+
+.connection-path.color-green ~ defs .arrow-marker {
+    fill: var(--pastel-green-dark);
+}
+
+.connection-path.color-purple ~ defs .arrow-marker {
+    fill: var(--pastel-purple-dark);
+}
+
+.connection-path.color-yellow ~ defs .arrow-marker {
+    fill: var(--pastel-yellow-dark);
+}
+
+.connection-path.color-orange ~ defs .arrow-marker {
+    fill: var(--pastel-orange-dark);
+}
+
+/* ============================================
+   CONNECTION PREVIEW
+   ============================================ */
+.connection-preview {
+    stroke: var(--accent-primary);
+    stroke-width: 2px;
+    stroke-dasharray: 5, 5;
+    fill: none;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* ============================================
+   CONNECTION STATES
+   ============================================ */
+.connection-path.error {
+    stroke: var(--color-error);
+}
+
+.connection-path.warning {
+    stroke: var(--color-warning);
+}
+
+.connection-path.success {
+    stroke: var(--color-success);
+}
+
+.connection-path.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.connection-path.disabled:hover {
+    stroke-width: 2px;
+    filter: none;
+}
+
+/* ============================================
+   CONNECTION GROUPS
+   ============================================ */
+.connection-group {
+    transition: opacity var(--transition-fast);
+}
+
+.connection-group:hover .connection-path {
+    stroke-width: 3px;
+}
+
+.connection-group:hover .connection-label {
+    font-weight: var(--font-weight-semibold);
+}
+
+/* ============================================
+   CONNECTION ANIMATIONS
+   ============================================ */
+@keyframes connectionAdd {
+    from {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+    }
+    to {
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+    }
+}
+
+.connection-path.connection-adding {
+    animation: connectionAdd 0.5s ease-out;
+}
+
+@keyframes connectionPulse {
+    0% { stroke-width: 2px; }
+    50% { stroke-width: 4px; }
+    100% { stroke-width: 2px; }
+}
+
+.connection-path.connection-pulse {
+    animation: connectionPulse 0.6s ease-in-out;
+}

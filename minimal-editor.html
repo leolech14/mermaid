@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Editor - Minimal Clean Version</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #0F1419;
+            color: #E2E8F0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #1A202C;
+            padding: 1rem;
+            border-bottom: 1px solid #2D3748;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #90CDF4;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        button {
+            background-color: #2D3748;
+            color: #E2E8F0;
+            border: 1px solid #4A5568;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #4A5568;
+            border-color: #718096;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 65px);
+        }
+
+        .editor-panel, .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-panel {
+            background-color: #1A202C;
+            border-right: 1px solid #2D3748;
+        }
+
+        .panel-header {
+            background-color: #2D3748;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-bottom: 1px solid #4A5568;
+        }
+
+        #editor {
+            flex: 1;
+            padding: 1rem;
+            background-color: #1A202C;
+            color: #E2E8F0;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            outline: none;
+            resize: none;
+            overflow-y: auto;
+        }
+
+        #preview {
+            flex: 1;
+            padding: 2rem;
+            background-color: #0F1419;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #preview .mermaid {
+            background-color: #1A202C;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-message {
+            background-color: #742A2A;
+            color: #FED7D7;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .sample-select {
+            background-color: #2D3748;
+            color: #E2E8F0;
+            border: 1px solid #4A5568;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .editor-panel {
+                border-right: none;
+                border-bottom: 1px solid #2D3748;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">Mermaid Editor</h1>
+        <select id="sampleSelect" class="sample-select">
+            <option value="">Load Sample...</option>
+            <option value="flowchart">Flowchart</option>
+            <option value="sequence">Sequence Diagram</option>
+            <option value="gantt">Gantt Chart</option>
+            <option value="pie">Pie Chart</option>
+            <option value="git">Git Graph</option>
+        </select>
+        <div class="toolbar">
+            <button onclick="formatCode()">Format</button>
+            <button onclick="copyCode()">Copy Code</button>
+            <button onclick="exportSVG()">Export SVG</button>
+            <button onclick="exportPNG()">Export PNG</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="editor-panel">
+            <div class="panel-header">Mermaid Code</div>
+            <textarea id="editor" placeholder="Enter your Mermaid diagram code here...">graph TD
+    A[Start] --> B{Is it?}
+    B -->|Yes| C[OK]
+    C --> D[Rethink]
+    D --> B
+    B ---->|No| E[End]</textarea>
+        </div>
+        
+        <div class="preview-panel">
+            <div class="panel-header">Preview</div>
+            <div id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid with dark theme
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#2D3748',
+                primaryTextColor: '#F7FAFC',
+                primaryBorderColor: '#B794F4',
+                lineColor: '#FBB6CE',
+                secondaryColor: '#90CDF4',
+                tertiaryColor: '#9AE6B4',
+                background: '#1A202C',
+                mainBkg: '#2D3748',
+                secondBkg: '#4A5568',
+                tertiaryBkg: '#718096',
+                primaryBoxBkg: '#2D3748',
+                primaryBoxBorder: '#B794F4',
+                nodeBkg: '#2D3748',
+                nodeTextColor: '#F7FAFC',
+                fontSize: '16px',
+                fontFamily: 'Inter, system-ui, sans-serif'
+            }
+        });
+
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+        const sampleSelect = document.getElementById('sampleSelect');
+        
+        // Sample diagrams
+        const samples = {
+            flowchart: `graph TD
+    A[Christmas] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]`,
+            
+            sequence: `sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>John: Hello John, how are you?
+    loop Healthcheck
+        John->>John: Fight against hypochondria
+    end
+    Note right of John: Rational thoughts <br/>prevail!
+    John-->>Alice: Great!
+    John->>Bob: How about you?
+    Bob-->>John: Jolly good!`,
+            
+            gantt: `gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d`,
+            
+            pie: `pie title Pets adopted by volunteers
+    "Dogs" : 386
+    "Cats" : 85
+    "Rats" : 15`,
+            
+            git: `gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit
+    commit`
+        };
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Render diagram
+        async function renderDiagram() {
+            const code = editor.value.trim();
+            if (!code) {
+                preview.innerHTML = '<div style="color: #718096; text-align: center;">Enter Mermaid code to see preview</div>';
+                return;
+            }
+
+            try {
+                const { svg } = await mermaid.render('mermaid-preview', code);
+                preview.innerHTML = svg;
+            } catch (error) {
+                preview.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Format code (basic formatting)
+        function formatCode() {
+            const code = editor.value;
+            // Basic formatting - add proper indentation
+            const lines = code.split('\n');
+            let formatted = [];
+            let indent = 0;
+            
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.includes('}') || trimmed.includes('end')) {
+                    indent = Math.max(0, indent - 1);
+                }
+                formatted.push('    '.repeat(indent) + trimmed);
+                if (trimmed.includes('{') || trimmed.includes('loop')) {
+                    indent++;
+                }
+            });
+            
+            editor.value = formatted.join('\n');
+            renderDiagram();
+        }
+
+        // Copy code to clipboard
+        async function copyCode() {
+            try {
+                await navigator.clipboard.writeText(editor.value);
+                // Show temporary success message
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = originalText, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        }
+
+        // Export as SVG
+        function exportSVG() {
+            const svg = preview.querySelector('svg');
+            if (!svg) return;
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'diagram.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Export as PNG
+        function exportPNG() {
+            const svg = preview.querySelector('svg');
+            if (!svg) return;
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width * 2; // Higher resolution
+                canvas.height = img.height * 2;
+                ctx.scale(2, 2);
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'diagram.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        // Load sample
+        sampleSelect.addEventListener('change', (e) => {
+            if (e.target.value && samples[e.target.value]) {
+                editor.value = samples[e.target.value];
+                renderDiagram();
+            }
+        });
+
+        // Auto-render on input with debounce
+        editor.addEventListener('input', debounce(renderDiagram, 500));
+
+        // Initial render
+        renderDiagram();
+
+        // Handle tab key in editor
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+            }
+        });
+    </script>
+</body>
+</html>

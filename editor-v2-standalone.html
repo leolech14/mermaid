@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Editor V2 - Standalone Version</title>
+    
+    <!-- Modern font stack -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Dark Theme Variables */
+        :root {
+            /* Base colors */
+            --color-background: #0F1419;
+            --color-surface-1: #1A202C;
+            --color-surface-2: #2D3748;
+            --color-surface-3: #4A5568;
+            
+            /* Accent colors */
+            --color-primary: #B794F4;
+            --color-secondary: #90CDF4;
+            --color-accent: #FBB6CE;
+            --color-success: #9AE6B4;
+            --color-warning: #F6E05E;
+            --color-error: #FC8181;
+            
+            /* Text colors */
+            --color-text: #F7FAFC;
+            --color-text-secondary: #E2E8F0;
+            --color-text-muted: #A0AEC0;
+            
+            /* Glass morphism */
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-blur: blur(10px) saturate(180%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--color-background);
+            color: var(--color-text);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--color-background);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-text {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            margin-top: 20px;
+        }
+        
+        /* Main Editor */
+        .editor-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--color-background);
+        }
+        
+        /* Toolbar */
+        .toolbar {
+            height: 56px;
+            background: var(--color-surface-1);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+        
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+        
+        .tool-btn:hover {
+            background: var(--color-surface-2);
+            color: var(--color-text);
+        }
+        
+        .tool-btn.active {
+            background: var(--color-primary);
+            color: var(--color-background);
+        }
+        
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: var(--color-background);
+            background-image: 
+                linear-gradient(var(--color-surface-1) 1px, transparent 1px),
+                linear-gradient(90deg, var(--color-surface-1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: -1px -1px;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 32px;
+            background: var(--color-surface-1);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 12px;
+            color: var(--color-text-muted);
+        }
+        
+        /* Selection Box */
+        .selection-box {
+            fill: rgba(183, 148, 244, 0.1);
+            stroke: var(--color-primary);
+            stroke-width: 1;
+            stroke-dasharray: 5, 5;
+            pointer-events: none;
+        }
+        
+        /* Multi-select styles */
+        .node-group.selecting .node-rect {
+            stroke: var(--color-secondary);
+            stroke-width: 2;
+        }
+        
+        /* Grid toggle button */
+        .grid-toggle {
+            margin-left: auto;
+            padding: 4px 8px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .grid-toggle:hover {
+            color: var(--color-text);
+            background: var(--color-surface-2);
+        }
+        
+        .grid-toggle.active {
+            color: var(--color-primary);
+        }
+        
+        /* Node resize handles */
+        .resize-handle {
+            fill: var(--color-primary);
+            opacity: 0;
+            cursor: nwse-resize;
+            transition: opacity 0.2s;
+        }
+        
+        .node-group.selected .resize-handle {
+            opacity: 0.5;
+        }
+        
+        .resize-handle:hover {
+            opacity: 1;
+        }
+        
+        /* Connection preview */
+        .connection-preview {
+            stroke: var(--color-primary);
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            fill: none;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        
+        /* Node type colors */
+        .node-type-start .node-rect { stroke: var(--color-success); }
+        .node-type-end .node-rect { stroke: var(--color-error); }
+        .node-type-decision .node-rect { stroke: var(--color-secondary); }
+        .node-type-process .node-rect { stroke: var(--color-primary); }
+        
+        /* Node shapes */
+        .node-type-start .node-rect,
+        .node-type-end .node-rect {
+            rx: 30;
+            ry: 30;
+        }
+        
+        .node-type-decision .node-rect {
+            transform: rotate(45deg);
+            transform-origin: center;
+        }
+        
+        .node-type-decision .node-text {
+            transform: rotate(-45deg);
+            transform-origin: center;
+        }
+        
+        /* Nested canvas indicator */
+        .has-canvas .node-rect {
+            stroke-width: 3;
+            stroke-dasharray: 0;
+        }
+        
+        .has-canvas::after {
+            content: '▼';
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: var(--color-text-muted);
+        }
+        
+        /* X-ray vision */
+        .xray-mode .node-group {
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+        
+        .xray-mode .has-canvas {
+            opacity: 0.8;
+        }
+        
+        .xray-canvas {
+            position: absolute;
+            background: var(--color-surface-1);
+            border: 2px solid var(--color-primary);
+            border-radius: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .xray-mode .xray-canvas {
+            opacity: 0.9;
+            pointer-events: all;
+        }
+        
+        /* Demo Message */
+        .demo-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 40px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            max-width: 600px;
+        }
+        
+        .demo-message h1 {
+            color: var(--color-primary);
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+        
+        .demo-message p {
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        
+        .demo-features {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature-card {
+            padding: 20px;
+            background: var(--color-surface-1);
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--color-primary);
+        }
+        
+        .feature-desc {
+            font-size: 14px;
+            color: var(--color-text-muted);
+        }
+        
+        .start-button {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: var(--color-primary);
+            color: var(--color-background);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(183, 148, 244, 0.4);
+        }
+        
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            min-width: 200px;
+            padding: 8px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .context-menu-item:hover {
+            background: var(--color-primary);
+            color: var(--color-background);
+        }
+        
+        .context-menu-divider {
+            height: 1px;
+            background: var(--glass-border);
+            margin: 4px 0;
+        }
+        
+        /* Nodes */
+        .node-group {
+            cursor: move;
+        }
+        
+        .node-rect {
+            fill: var(--color-surface-2);
+            stroke: var(--color-primary);
+            stroke-width: 2;
+            rx: 8;
+            transition: all 0.2s;
+        }
+        
+        .node-group:hover .node-rect {
+            fill: var(--color-surface-3);
+            filter: drop-shadow(0 4px 8px rgba(183, 148, 244, 0.3));
+        }
+        
+        .node-group.selected .node-rect {
+            stroke: var(--color-accent);
+            stroke-width: 3;
+        }
+        
+        .node-text {
+            fill: var(--color-text);
+            font-size: 14px;
+            pointer-events: none;
+            user-select: none;
+        }
+        
+        /* Connections */
+        .connection {
+            stroke: var(--color-primary);
+            stroke-width: 2;
+            fill: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .connection:hover {
+            stroke-width: 3;
+            filter: drop-shadow(0 0 4px var(--color-primary));
+        }
+        
+        .connection.selected {
+            stroke: var(--color-accent);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <svg width="80" height="80" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#B794F4;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#90CDF4;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect x="10" y="10" width="30" height="30" rx="5" fill="url(#gradient)" opacity="0.9"/>
+                <rect x="10" y="50" width="30" height="30" rx="5" fill="url(#gradient)" opacity="0.7"/>
+                <rect x="50" y="10" width="30" height="30" rx="5" fill="url(#gradient)" opacity="0.7"/>
+                <rect x="50" y="50" width="30" height="30" rx="5" fill="url(#gradient)" opacity="0.5"/>
+            </svg>
+            <div class="loading-text">Loading Mermaid Editor V2...</div>
+        </div>
+    </div>
+    
+    <!-- Main Editor -->
+    <div class="editor-container" id="editor" style="display: none;">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="tool-btn active" data-tool="select" title="Select (V)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="node" title="Node (N)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="connection" title="Connection (C)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="pan" title="Pan (H)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div style="flex: 1;"></div>
+            
+            <div class="toolbar-group">
+                <button class="tool-btn" title="Undo (Ctrl+Z)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+                    </svg>
+                </button>
+                <button class="tool-btn" title="Redo (Ctrl+Y)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 7v6h-6M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Canvas -->
+        <div class="canvas-container">
+            <svg id="canvas">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="var(--color-primary)"/>
+                    </marker>
+                </defs>
+                <g id="connections"></g>
+                <g id="nodes"></g>
+            </svg>
+            
+            <!-- Context Menu -->
+            <div id="contextMenu" class="context-menu" style="display: none;">
+                <div class="context-menu-item" onclick="createNode('process')">
+                    <span>📦</span> Create Process Node
+                </div>
+                <div class="context-menu-item" onclick="createNode('decision')">
+                    <span>💎</span> Create Decision Node
+                </div>
+                <div class="context-menu-item" onclick="createNode('start')">
+                    <span>🟢</span> Create Start Node
+                </div>
+                <div class="context-menu-item" onclick="createNode('end')">
+                    <span>🔴</span> Create End Node
+                </div>
+                <div class="context-menu-divider"></div>
+                <div class="context-menu-item" onclick="selectAll()">
+                    <span>⬚</span> Select All
+                </div>
+                <div class="context-menu-item" onclick="deselectAll()">
+                    <span>◻</span> Deselect All
+                </div>
+            </div>
+            
+            <!-- Node Context Menu -->
+            <div id="nodeContextMenu" class="context-menu" style="display: none;">
+                <div class="context-menu-item" onclick="editNode()">
+                    <span>✏️</span> Edit Label
+                </div>
+                <div class="context-menu-item" onclick="duplicateNode()">
+                    <span>📋</span> Duplicate
+                </div>
+                <div class="context-menu-divider"></div>
+                <div class="context-menu-item" onclick="deleteNode()">
+                    <span>🗑️</span> Delete
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span id="statusMessage">Ready</span>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <span id="selectionInfo"></span>
+                <span id="zoomLevel">100%</span>
+                <button class="grid-toggle active" onclick="toggleGrid()" title="Toggle Grid">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Standalone Mermaid Editor V2 - Basic functionality
+        
+        // Editor state
+        const state = {
+            nodes: new Map(),
+            connections: new Map(),
+            selectedNodes: new Set(),
+            selectedConnections: new Set(),
+            currentTool: 'select',
+            nodeIdCounter: 1,
+            connectionIdCounter: 1,
+            isDragging: false,
+            isConnecting: false,
+            isSelecting: false,
+            isPanning: false,
+            isResizing: false,
+            draggedNode: null,
+            draggedNodes: [],
+            connectionStart: null,
+            contextMenuPos: null,
+            selectionStart: null,
+            contextNode: null,
+            zoom: 1.0,
+            pan: { x: 0, y: 0 },
+            showGrid: true,
+            snapToGrid: true,
+            gridSize: 20,
+            history: [],
+            historyIndex: -1,
+            clipboard: null,
+            xrayMode: false,
+            nestedCanvases: new Map(),
+            resizeNode: null,
+            resizeStart: null,
+            connectionPreview: null
+        };
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    document.getElementById('editor').style.display = 'flex';
+                    initializeEditor();
+                }, 500);
+            }, 1000);
+        });
+        
+        function initializeEditor() {
+            const canvas = document.getElementById('canvas');
+            const statusBar = document.querySelector('.status-bar');
+            
+            // Set initial status
+            updateStatus('Ready. Right-click to create nodes.');
+            
+            // Tool switching
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.currentTool = btn.dataset.tool;
+                    updateStatus(`Tool: ${state.currentTool}`);
+                });
+            });
+            
+            // Canvas events
+            canvas.addEventListener('contextmenu', handleCanvasRightClick);
+            canvas.addEventListener('mousedown', handleCanvasMouseDown);
+            canvas.addEventListener('mousemove', handleCanvasMouseMove);
+            canvas.addEventListener('mouseup', handleCanvasMouseUp);
+            canvas.addEventListener('click', handleCanvasClick);
+            
+            // Hide context menu on click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.context-menu')) {
+                    hideContextMenu();
+                }
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Mouse wheel for zoom
+            canvas.addEventListener('wheel', handleWheel);
+            
+            // Create initial nodes
+            createInitialDiagram();
+        }
+        
+        // Create initial diagram
+        function createInitialDiagram() {
+            const node1 = createNodeAt(300, 100, 'Start');
+            const node2 = createNodeAt(300, 200, 'Process');
+            const node3 = createNodeAt(300, 300, 'End');
+            
+            createConnection(node1, node2);
+            createConnection(node2, node3);
+        }
+        
+        // Node creation
+        function createNode(type = 'process') {
+            if (state.contextMenuPos) {
+                const rect = document.getElementById('canvas').getBoundingClientRect();
+                const x = state.contextMenuPos.x - rect.left;
+                const y = state.contextMenuPos.y - rect.top;
+                const labels = {
+                    'start': 'Start',
+                    'end': 'End',
+                    'process': 'Process',
+                    'decision': 'Decision'
+                };
+                createNodeAt(x - 60, y - 30, labels[type] || 'New Node', type);
+                hideContextMenu();
+                saveToHistory();
+            }
+        }
+        
+        function createNodeAt(x, y, label, type = 'process') {
+            const nodeId = `node${state.nodeIdCounter++}`;
+            
+            // Snap to grid if enabled
+            if (state.snapToGrid) {
+                x = Math.round(x / state.gridSize) * state.gridSize;
+                y = Math.round(y / state.gridSize) * state.gridSize;
+            }
+            
+            const nodeData = {
+                id: nodeId,
+                x: x,
+                y: y,
+                width: 120,
+                height: 60,
+                label: label,
+                type: type
+            };
+            
+            // Create SVG elements
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('id', nodeId);
+            g.setAttribute('class', `node-group node-type-${type}`);
+            g.setAttribute('transform', `translate(${x}, ${y})`);
+            
+            let shape;
+            if (type === 'decision') {
+                // Create diamond shape for decision nodes
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shape.setAttribute('class', 'node-rect');
+                shape.setAttribute('width', nodeData.width * 0.7);
+                shape.setAttribute('height', nodeData.height * 0.7);
+                shape.setAttribute('x', nodeData.width * 0.15);
+                shape.setAttribute('y', nodeData.height * 0.15);
+            } else {
+                // Regular rectangle for other types
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shape.setAttribute('class', 'node-rect');
+                shape.setAttribute('width', nodeData.width);
+                shape.setAttribute('height', nodeData.height);
+            }
+            
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('class', 'node-text');
+            text.setAttribute('x', nodeData.width / 2);
+            text.setAttribute('y', nodeData.height / 2);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dy', '0.35em');
+            text.textContent = label;
+            
+            g.appendChild(shape);
+            g.appendChild(text);
+            
+            // Add resize handles
+            if (type !== 'start' && type !== 'end') {
+                const resizeHandle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                resizeHandle.setAttribute('class', 'resize-handle');
+                resizeHandle.setAttribute('width', 8);
+                resizeHandle.setAttribute('height', 8);
+                resizeHandle.setAttribute('x', nodeData.width - 4);
+                resizeHandle.setAttribute('y', nodeData.height - 4);
+                resizeHandle.addEventListener('mousedown', (e) => handleResizeStart(e, nodeData));
+                g.appendChild(resizeHandle);
+            }
+            
+            // Add to DOM
+            document.getElementById('nodes').appendChild(g);
+            
+            // Store node data
+            nodeData.element = g;
+            state.nodes.set(nodeId, nodeData);
+            
+            // Add node events
+            g.addEventListener('mousedown', (e) => handleNodeMouseDown(e, nodeData));
+            g.addEventListener('click', (e) => handleNodeClick(e, nodeData));
+            g.addEventListener('contextmenu', (e) => handleNodeRightClick(e, nodeData));
+            
+            updateStatus(`Created node: ${label}`);
+            return nodeData;
+        }
+        
+        // Connection creation
+        function createConnection(fromNode, toNode) {
+            const connId = `conn${state.connectionIdCounter++}`;
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('id', connId);
+            path.setAttribute('class', 'connection');
+            path.setAttribute('marker-end', 'url(#arrowhead)');
+            
+            const connectionData = {
+                id: connId,
+                from: fromNode,
+                to: toNode,
+                element: path
+            };
+            
+            updateConnectionPath(connectionData);
+            
+            document.getElementById('connections').appendChild(path);
+            state.connections.set(connId, connectionData);
+            
+            path.addEventListener('click', (e) => handleConnectionClick(e, connectionData));
+            
+            return connectionData;
+        }
+        
+        function updateConnectionPath(connection) {
+            const from = connection.from;
+            const to = connection.to;
+            
+            const x1 = from.x + from.width / 2;
+            const y1 = from.y + from.height;
+            const x2 = to.x + to.width / 2;
+            const y2 = to.y;
+            
+            // Create curved path for better aesthetics
+            const controlPointOffset = Math.abs(y2 - y1) * 0.5;
+            const path = `M ${x1} ${y1} C ${x1} ${y1 + controlPointOffset}, ${x2} ${y2 - controlPointOffset}, ${x2} ${y2}`;
+            connection.element.setAttribute('d', path);
+        }
+        
+        // Event handlers
+        function handleCanvasRightClick(e) {
+            e.preventDefault();
+            state.contextMenuPos = { x: e.clientX, y: e.clientY };
+            showContextMenu(e.clientX, e.clientY);
+        }
+        
+        function handleCanvasClick(e) {
+            if (e.target === document.getElementById('canvas')) {
+                clearSelection();
+            }
+        }
+        
+        function handleCanvasMouseDown(e) {
+            const canvas = document.getElementById('canvas');
+            
+            if (e.target === canvas) {
+                if (state.currentTool === 'pan' || e.shiftKey || state.spacePressed) {
+                    state.isPanning = true;
+                    state.panStart = { x: e.clientX, y: e.clientY };
+                    state.panStartPos = { x: state.pan.x, y: state.pan.y };
+                    canvas.style.cursor = 'grabbing';
+                } else if (state.currentTool === 'select') {
+                    // Start selection box
+                    const rect = canvas.getBoundingClientRect();
+                    state.isSelecting = true;
+                    state.selectionStart = {
+                        x: e.clientX - rect.left,
+                        y: e.clientY - rect.top
+                    };
+                    createSelectionBox();
+                }
+            }
+        }
+        
+        function handleCanvasMouseMove(e) {
+            const rect = document.getElementById('canvas').getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            if (state.isDragging && state.draggedNodes.length > 0) {
+                // Move multiple selected nodes
+                state.draggedNodes.forEach(({node, offset}) => {
+                    let x = mouseX - offset.x;
+                    let y = mouseY - offset.y;
+                    
+                    // Snap to grid
+                    if (state.snapToGrid) {
+                        x = Math.round(x / state.gridSize) * state.gridSize;
+                        y = Math.round(y / state.gridSize) * state.gridSize;
+                    }
+                    
+                    node.x = x;
+                    node.y = y;
+                    node.element.setAttribute('transform', `translate(${x}, ${y})`);
+                });
+                
+                // Update all connections
+                state.connections.forEach(conn => {
+                    if (state.draggedNodes.some(d => d.node === conn.from || d.node === conn.to)) {
+                        updateConnectionPath(conn);
+                    }
+                });
+                
+                // Check for drag-into nested canvas
+                checkDragInto(mouseX, mouseY);
+            } else if (state.isResizing && state.resizeNode) {
+                // Resize node
+                const dx = mouseX - state.resizeStart.x;
+                const dy = mouseY - state.resizeStart.y;
+                
+                const newWidth = Math.max(60, state.resizeStart.width + dx);
+                const newHeight = Math.max(40, state.resizeStart.height + dy);
+                
+                state.resizeNode.width = newWidth;
+                state.resizeNode.height = newHeight;
+                
+                // Update visual elements
+                const rect = state.resizeNode.element.querySelector('.node-rect');
+                if (rect) {
+                    rect.setAttribute('width', newWidth);
+                    rect.setAttribute('height', newHeight);
+                }
+                
+                // Update text position
+                const text = state.resizeNode.element.querySelector('.node-text');
+                if (text) {
+                    text.setAttribute('x', newWidth / 2);
+                    text.setAttribute('y', newHeight / 2);
+                }
+                
+                // Update resize handle
+                const handle = state.resizeNode.element.querySelector('.resize-handle');
+                if (handle) {
+                    handle.setAttribute('x', newWidth - 4);
+                    handle.setAttribute('y', newHeight - 4);
+                }
+                
+                // Update connections
+                state.connections.forEach(conn => {
+                    if (conn.from === state.resizeNode || conn.to === state.resizeNode) {
+                        updateConnectionPath(conn);
+                    }
+                });
+            } else if (state.isSelecting) {
+                // Update selection box
+                updateSelectionBox(e);
+            } else if (state.isPanning) {
+                // Pan canvas
+                const dx = e.clientX - state.panStart.x;
+                const dy = e.clientY - state.panStart.y;
+                state.pan.x = state.panStartPos.x + dx;
+                state.pan.y = state.panStartPos.y + dy;
+                updateTransform();
+            } else if (state.isConnecting && state.connectionStart) {
+                // Show connection preview
+                updateConnectionPreview(mouseX, mouseY);
+            }
+        }
+        
+        function handleCanvasMouseUp(e) {
+            if (state.isDragging) {
+                // Complete drag-into operation if applicable
+                completeDragInto();
+                saveToHistory();
+            }
+            
+            if (state.isSelecting) {
+                endSelection();
+            }
+            
+            if (state.isResizing) {
+                saveToHistory();
+            }
+            
+            state.isDragging = false;
+            state.draggedNodes = [];
+            state.isPanning = false;
+            state.isResizing = false;
+            state.resizeNode = null;
+            
+            document.getElementById('canvas').style.cursor = 'default';
+        }
+        
+        function handleNodeMouseDown(e, node) {
+            e.stopPropagation();
+            
+            if (state.currentTool === 'select') {
+                const rect = document.getElementById('canvas').getBoundingClientRect();
+                
+                // Handle multi-selection
+                if (!state.selectedNodes.has(node.id)) {
+                    if (!e.ctrlKey && !e.metaKey) {
+                        clearSelection();
+                    }
+                    selectNode(node);
+                }
+                
+                // Prepare dragging for all selected nodes
+                state.isDragging = true;
+                state.draggedNodes = Array.from(state.selectedNodes).map(id => {
+                    const n = state.nodes.get(id);
+                    return {
+                        node: n,
+                        offset: {
+                            x: e.clientX - rect.left - n.x,
+                            y: e.clientY - rect.top - n.y
+                        }
+                    };
+                });
+            }
+        }
+        
+        function handleNodeClick(e, node) {
+            e.stopPropagation();
+            
+            if (state.currentTool === 'select') {
+                clearSelection();
+                selectNode(node);
+            } else if (state.currentTool === 'connection') {
+                if (!state.isConnecting) {
+                    // Start connection
+                    state.isConnecting = true;
+                    state.connectionStart = node;
+                    updateStatus('Click another node to connect');
+                } else {
+                    // Complete connection
+                    if (state.connectionStart !== node) {
+                        createConnection(state.connectionStart, node);
+                        updateStatus('Connection created');
+                    }
+                    state.isConnecting = false;
+                    state.connectionStart = null;
+                    clearConnectionPreview();
+                }
+            }
+        }
+        
+        function handleNodeRightClick(e, node) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (state.isConnecting && state.connectionStart && state.connectionStart !== node) {
+                createConnection(state.connectionStart, node);
+                state.isConnecting = false;
+                state.connectionStart = null;
+                clearConnectionPreview();
+                updateStatus('Connection created');
+            }
+        }
+        
+        function handleConnectionClick(e, connection) {
+            e.stopPropagation();
+            clearSelection();
+            selectConnection(connection);
+        }
+        
+        function handleKeyDown(e) {
+            // Tool shortcuts (1-4)
+            if (e.key >= '1' && e.key <= '4' && !e.ctrlKey && !e.metaKey) {
+                const tools = ['select', 'node', 'connection', 'pan'];
+                const toolIndex = parseInt(e.key) - 1;
+                if (toolIndex < tools.length) {
+                    const toolBtn = document.querySelector(`[data-tool="${tools[toolIndex]}"]`);
+                    if (toolBtn) toolBtn.click();
+                }
+            }
+            // Delete
+            else if (e.key === 'Delete' || e.key === 'Backspace') {
+                deleteSelected();
+            }
+            // Select all
+            else if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                selectAll();
+            }
+            // Undo
+            else if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            }
+            // Redo
+            else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || 
+                     (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+                e.preventDefault();
+                redo();
+            }
+            // Copy
+            else if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                copySelected();
+            }
+            // Paste
+            else if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                paste();
+            }
+            // Duplicate
+            else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                duplicateSelected();
+            }
+            // Escape
+            else if (e.key === 'Escape') {
+                clearSelection();
+                state.isConnecting = false;
+                state.connectionStart = null;
+                hideAllMenus();
+            }
+            // Space for pan
+            else if (e.code === 'Space' && !state.spacePressed) {
+                e.preventDefault();
+                state.spacePressed = true;
+                document.getElementById('canvas').style.cursor = 'grab';
+            }
+            // X-ray vision (Alt+X)
+            else if (e.key === 'x' && e.altKey) {
+                e.preventDefault();
+                toggleXRayVision();
+            }
+            // Tool shortcuts V, N, C, H
+            else if (e.key === 'v' && !e.ctrlKey && !e.metaKey) {
+                document.querySelector('[data-tool="select"]').click();
+            }
+            else if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
+                document.querySelector('[data-tool="node"]').click();
+            }
+            else if (e.key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                document.querySelector('[data-tool="connection"]').click();
+            }
+            else if (e.key === 'h' && !e.ctrlKey && !e.metaKey) {
+                document.querySelector('[data-tool="pan"]').click();
+            }
+            
+            updateSelectionInfo();
+        }
+        
+        // Selection management
+        function selectNode(node) {
+            state.selectedNodes.add(node.id);
+            node.element.classList.add('selected');
+        }
+        
+        function selectConnection(connection) {
+            state.selectedConnections.add(connection.id);
+            connection.element.classList.add('selected');
+        }
+        
+        function clearSelection() {
+            state.selectedNodes.forEach(id => {
+                const node = state.nodes.get(id);
+                if (node) node.element.classList.remove('selected');
+            });
+            state.selectedConnections.forEach(id => {
+                const conn = state.connections.get(id);
+                if (conn) conn.element.classList.remove('selected');
+            });
+            state.selectedNodes.clear();
+            state.selectedConnections.clear();
+        }
+        
+        function selectAll() {
+            clearSelection();
+            state.nodes.forEach(node => selectNode(node));
+            state.connections.forEach(conn => selectConnection(conn));
+            updateStatus(`Selected ${state.nodes.size} nodes and ${state.connections.size} connections`);
+        }
+        
+        function deleteSelected() {
+            // Delete selected connections first
+            state.selectedConnections.forEach(id => {
+                const conn = state.connections.get(id);
+                if (conn) {
+                    conn.element.remove();
+                    state.connections.delete(id);
+                }
+            });
+            
+            // Delete selected nodes and their connections
+            state.selectedNodes.forEach(nodeId => {
+                const node = state.nodes.get(nodeId);
+                if (node) {
+                    // Remove connections to/from this node
+                    state.connections.forEach((conn, connId) => {
+                        if (conn.from === node || conn.to === node) {
+                            conn.element.remove();
+                            state.connections.delete(connId);
+                        }
+                    });
+                    
+                    // Remove node
+                    node.element.remove();
+                    state.nodes.delete(nodeId);
+                }
+            });
+            
+            clearSelection();
+            updateStatus('Deleted selected items');
+        }
+        
+        // Context menu
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+        }
+        
+        function hideContextMenu() {
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+        
+        // Status bar
+        function updateStatus(message) {
+            document.getElementById('statusMessage').textContent = message;
+        }
+        
+        // Additional functions for enhanced features
+        function updateSelectionInfo() {
+            const nodeCount = state.selectedNodes.size;
+            const connCount = state.selectedConnections.size;
+            const info = document.getElementById('selectionInfo');
+            
+            if (nodeCount > 0 || connCount > 0) {
+                const parts = [];
+                if (nodeCount > 0) parts.push(`${nodeCount} node${nodeCount > 1 ? 's' : ''}`);
+                if (connCount > 0) parts.push(`${connCount} connection${connCount > 1 ? 's' : ''}`);
+                info.textContent = parts.join(', ') + ' selected';
+            } else {
+                info.textContent = '';
+            }
+        }
+        
+        function createSelectionBox() {
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('class', 'selection-box');
+            rect.setAttribute('id', 'selectionBox');
+            document.getElementById('canvas').appendChild(rect);
+        }
+        
+        function updateSelectionBox(e) {
+            const rect = document.getElementById('canvas').getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            const x = Math.min(state.selectionStart.x, currentX);
+            const y = Math.min(state.selectionStart.y, currentY);
+            const width = Math.abs(currentX - state.selectionStart.x);
+            const height = Math.abs(currentY - state.selectionStart.y);
+            
+            const box = document.getElementById('selectionBox');
+            if (box) {
+                box.setAttribute('x', x);
+                box.setAttribute('y', y);
+                box.setAttribute('width', width);
+                box.setAttribute('height', height);
+            }
+            
+            // Check which nodes are in the selection
+            state.nodes.forEach(node => {
+                const inSelection = (
+                    node.x < x + width &&
+                    node.x + node.width > x &&
+                    node.y < y + height &&
+                    node.y + node.height > y
+                );
+                
+                if (inSelection) {
+                    node.element.classList.add('selecting');
+                } else {
+                    node.element.classList.remove('selecting');
+                }
+            });
+        }
+        
+        function endSelection() {
+            const box = document.getElementById('selectionBox');
+            if (box) {
+                // Select all nodes with 'selecting' class
+                state.nodes.forEach(node => {
+                    if (node.element.classList.contains('selecting')) {
+                        selectNode(node);
+                        node.element.classList.remove('selecting');
+                    }
+                });
+                
+                box.remove();
+            }
+            
+            state.isSelecting = false;
+            state.selectionStart = null;
+            updateSelectionInfo();
+        }
+        
+        // History management
+        function saveToHistory() {
+            // Create snapshot of current state
+            const snapshot = {
+                nodes: Array.from(state.nodes.values()).map(n => ({
+                    id: n.id,
+                    x: n.x,
+                    y: n.y,
+                    width: n.width,
+                    height: n.height,
+                    label: n.label,
+                    type: n.type
+                })),
+                connections: Array.from(state.connections.values()).map(c => ({
+                    id: c.id,
+                    from: c.from.id,
+                    to: c.to.id
+                }))
+            };
+            
+            // Remove any history after current index
+            state.history = state.history.slice(0, state.historyIndex + 1);
+            
+            // Add new snapshot
+            state.history.push(snapshot);
+            state.historyIndex++;
+            
+            // Limit history size
+            if (state.history.length > 50) {
+                state.history.shift();
+                state.historyIndex--;
+            }
+        }
+        
+        function undo() {
+            if (state.historyIndex > 0) {
+                state.historyIndex--;
+                restoreFromHistory(state.history[state.historyIndex]);
+                updateStatus('Undo');
+            }
+        }
+        
+        function redo() {
+            if (state.historyIndex < state.history.length - 1) {
+                state.historyIndex++;
+                restoreFromHistory(state.history[state.historyIndex]);
+                updateStatus('Redo');
+            }
+        }
+        
+        function restoreFromHistory(snapshot) {
+            // Clear current state
+            state.nodes.forEach(node => node.element.remove());
+            state.connections.forEach(conn => conn.element.remove());
+            state.nodes.clear();
+            state.connections.clear();
+            
+            // Restore nodes
+            const nodeMap = new Map();
+            snapshot.nodes.forEach(nodeData => {
+                const node = createNodeAt(nodeData.x, nodeData.y, nodeData.label, nodeData.type);
+                nodeMap.set(nodeData.id, node);
+            });
+            
+            // Restore connections
+            snapshot.connections.forEach(connData => {
+                const from = nodeMap.get(connData.from);
+                const to = nodeMap.get(connData.to);
+                if (from && to) {
+                    createConnection(from, to);
+                }
+            });
+        }
+        
+        // Copy/Paste
+        function copySelected() {
+            if (state.selectedNodes.size > 0) {
+                state.clipboard = {
+                    nodes: Array.from(state.selectedNodes).map(id => {
+                        const node = state.nodes.get(id);
+                        return {
+                            x: node.x,
+                            y: node.y,
+                            width: node.width,
+                            height: node.height,
+                            label: node.label,
+                            type: node.type
+                        };
+                    })
+                };
+                updateStatus('Copied ' + state.selectedNodes.size + ' nodes');
+            }
+        }
+        
+        function paste() {
+            if (state.clipboard && state.clipboard.nodes) {
+                clearSelection();
+                const offset = 20;
+                
+                state.clipboard.nodes.forEach(nodeData => {
+                    const node = createNodeAt(
+                        nodeData.x + offset,
+                        nodeData.y + offset,
+                        nodeData.label + ' (Copy)',
+                        nodeData.type
+                    );
+                    selectNode(node);
+                });
+                
+                saveToHistory();
+                updateStatus('Pasted ' + state.clipboard.nodes.length + ' nodes');
+            }
+        }
+        
+        function duplicateSelected() {
+            copySelected();
+            paste();
+        }
+        
+        // Enhanced node functions
+        function handleNodeRightClick(e, node) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (state.isConnecting && state.connectionStart && state.connectionStart !== node) {
+                createConnection(state.connectionStart, node);
+                state.isConnecting = false;
+                state.connectionStart = null;
+                clearConnectionPreview();
+                updateStatus('Connection created');
+            } else {
+                // Show node context menu
+                state.contextNode = node;
+                const menu = document.getElementById('nodeContextMenu');
+                menu.style.display = 'block';
+                menu.style.left = e.clientX + 'px';
+                menu.style.top = e.clientY + 'px';
+            }
+        }
+        
+        function editNode() {
+            if (state.contextNode) {
+                const newLabel = prompt('Enter new label:', state.contextNode.label);
+                if (newLabel !== null && newLabel !== '') {
+                    state.contextNode.label = newLabel;
+                    const text = state.contextNode.element.querySelector('text');
+                    if (text) text.textContent = newLabel;
+                    saveToHistory();
+                }
+            }
+            hideAllMenus();
+        }
+        
+        function duplicateNode() {
+            if (state.contextNode) {
+                const node = state.contextNode;
+                const newNode = createNodeAt(
+                    node.x + 20,
+                    node.y + 20,
+                    node.label + ' (Copy)',
+                    node.type
+                );
+                selectNode(newNode);
+                saveToHistory();
+            }
+            hideAllMenus();
+        }
+        
+        function deleteNode() {
+            if (state.contextNode) {
+                state.selectedNodes.clear();
+                state.selectedNodes.add(state.contextNode.id);
+                deleteSelected();
+            }
+            hideAllMenus();
+        }
+        
+        // Zoom handling
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            state.zoom = Math.min(Math.max(0.1, state.zoom * delta), 5);
+            updateZoom();
+        }
+        
+        function updateZoom() {
+            const canvas = document.getElementById('canvas');
+            const transform = `scale(${state.zoom}) translate(${state.pan.x}px, ${state.pan.y}px)`;
+            canvas.style.transform = transform;
+            document.getElementById('zoomLevel').textContent = Math.round(state.zoom * 100) + '%';
+        }
+        
+        // Grid toggle
+        function toggleGrid() {
+            state.showGrid = !state.showGrid;
+            const container = document.querySelector('.canvas-container');
+            const button = document.querySelector('.grid-toggle');
+            
+            if (state.showGrid) {
+                container.style.backgroundImage = 
+                    'linear-gradient(var(--color-surface-1) 1px, transparent 1px),' +
+                    'linear-gradient(90deg, var(--color-surface-1) 1px, transparent 1px)';
+                button.classList.add('active');
+            } else {
+                container.style.backgroundImage = 'none';
+                button.classList.remove('active');
+            }
+        }
+        
+        // Helper functions
+        function hideAllMenus() {
+            document.getElementById('contextMenu').style.display = 'none';
+            document.getElementById('nodeContextMenu').style.display = 'none';
+        }
+        
+        function deselectAll() {
+            clearSelection();
+            updateStatus('Deselected all');
+        }
+        
+        // Handle key up for space
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                state.spacePressed = false;
+                document.getElementById('canvas').style.cursor = state.currentTool === 'pan' ? 'grab' : 'default';
+            }
+        });
+        
+        // Additional advanced features
+        
+        // Resize handling
+        function handleResizeStart(e, node) {
+            e.stopPropagation();
+            state.isResizing = true;
+            state.resizeNode = node;
+            const rect = document.getElementById('canvas').getBoundingClientRect();
+            state.resizeStart = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+                width: node.width,
+                height: node.height
+            };
+        }
+        
+        // Connection preview
+        function updateConnectionPreview(x, y) {
+            if (!state.connectionPreview) {
+                const preview = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                preview.setAttribute('class', 'connection-preview');
+                document.getElementById('canvas').appendChild(preview);
+                state.connectionPreview = preview;
+            }
+            
+            const from = state.connectionStart;
+            const x1 = from.x + from.width / 2;
+            const y1 = from.y + from.height;
+            
+            const controlPointOffset = Math.abs(y - y1) * 0.5;
+            const path = `M ${x1} ${y1} C ${x1} ${y1 + controlPointOffset}, ${x} ${y - controlPointOffset}, ${x} ${y}`;
+            state.connectionPreview.setAttribute('d', path);
+        }
+        
+        function clearConnectionPreview() {
+            if (state.connectionPreview) {
+                state.connectionPreview.remove();
+                state.connectionPreview = null;
+            }
+        }
+        
+        // Transform handling
+        function updateTransform() {
+            const canvas = document.getElementById('canvas');
+            const transform = `scale(${state.zoom}) translate(${state.pan.x}px, ${state.pan.y}px)`;
+            canvas.style.transform = transform;
+            canvas.style.transformOrigin = '0 0';
+        }
+        
+        // X-ray vision
+        function toggleXRayVision() {
+            state.xrayMode = !state.xrayMode;
+            const canvas = document.getElementById('canvas');
+            
+            if (state.xrayMode) {
+                canvas.classList.add('xray-mode');
+                updateStatus('X-Ray Vision: ON');
+                
+                // Show nested canvases
+                state.nestedCanvases.forEach((canvasData, nodeId) => {
+                    const node = state.nodes.get(nodeId);
+                    if (node) {
+                        showNestedCanvas(node, canvasData);
+                    }
+                });
+            } else {
+                canvas.classList.remove('xray-mode');
+                updateStatus('X-Ray Vision: OFF');
+                
+                // Hide nested canvases
+                document.querySelectorAll('.xray-canvas').forEach(el => el.remove());
+            }
+        }
+        
+        function showNestedCanvas(node, canvasData) {
+            const xrayCanvas = document.createElement('div');
+            xrayCanvas.className = 'xray-canvas';
+            xrayCanvas.style.left = node.x + 'px';
+            xrayCanvas.style.top = node.y + node.height + 10 + 'px';
+            xrayCanvas.style.width = node.width + 'px';
+            xrayCanvas.style.height = '100px';
+            
+            // Add miniature representation of nested content
+            xrayCanvas.innerHTML = `<svg width="100%" height="100%" style="opacity: 0.7">
+                ${canvasData.nodes.map(n => `
+                    <rect x="${n.x * 0.2}" y="${n.y * 0.2}" 
+                          width="${n.width * 0.2}" height="${n.height * 0.2}" 
+                          fill="var(--color-surface-3)" stroke="var(--color-primary)" />
+                `).join('')}
+            </svg>`;
+            
+            document.querySelector('.canvas-container').appendChild(xrayCanvas);
+        }
+        
+        // Drag-into nested canvas
+        function checkDragInto(mouseX, mouseY) {
+            // Find potential target node
+            let targetNode = null;
+            
+            state.nodes.forEach(node => {
+                if (!state.selectedNodes.has(node.id) &&
+                    mouseX >= node.x && mouseX <= node.x + node.width &&
+                    mouseY >= node.y && mouseY <= node.y + node.height) {
+                    targetNode = node;
+                }
+            });
+            
+            // Visual feedback
+            state.nodes.forEach(node => {
+                if (node === targetNode) {
+                    node.element.classList.add('drag-target');
+                } else {
+                    node.element.classList.remove('drag-target');
+                }
+            });
+            
+            state.dragTarget = targetNode;
+        }
+        
+        function completeDragInto() {
+            if (state.dragTarget && state.selectedNodes.size > 0) {
+                // Create nested canvas in target node
+                const nestedNodes = [];
+                
+                state.selectedNodes.forEach(nodeId => {
+                    const node = state.nodes.get(nodeId);
+                    if (node && node !== state.dragTarget) {
+                        nestedNodes.push({
+                            id: node.id,
+                            x: node.x - state.dragTarget.x,
+                            y: node.y - state.dragTarget.y,
+                            width: node.width,
+                            height: node.height,
+                            label: node.label,
+                            type: node.type
+                        });
+                        
+                        // Remove from main canvas
+                        node.element.remove();
+                        state.nodes.delete(node.id);
+                        
+                        // Remove connections
+                        state.connections.forEach((conn, connId) => {
+                            if (conn.from === node || conn.to === node) {
+                                conn.element.remove();
+                                state.connections.delete(connId);
+                            }
+                        });
+                    }
+                });
+                
+                if (nestedNodes.length > 0) {
+                    // Store nested canvas data
+                    state.nestedCanvases.set(state.dragTarget.id, {
+                        nodes: nestedNodes,
+                        connections: []
+                    });
+                    
+                    // Update target node appearance
+                    state.dragTarget.element.classList.add('has-canvas');
+                    
+                    updateStatus(`Moved ${nestedNodes.length} nodes into ${state.dragTarget.label}`);
+                }
+            }
+            
+            // Clean up
+            state.nodes.forEach(node => {
+                node.element.classList.remove('drag-target');
+            });
+            state.dragTarget = null;
+        }
+        
+        // Style updates for drag target
+        const style = document.createElement('style');
+        style.textContent = `
+            .drag-target .node-rect {
+                stroke-width: 4;
+                stroke: var(--color-accent);
+                filter: drop-shadow(0 0 8px var(--color-accent));
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

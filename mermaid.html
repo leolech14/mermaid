@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Editor V2 - Visual Diagram Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0F1419;
+            --bg-secondary: #1A202C;
+            --bg-tertiary: #2D3748;
+            --bg-hover: #4A5568;
+            --text-primary: #F7FAFC;
+            --text-secondary: #E2E8F0;
+            --text-muted: #A0AEC0;
+            --accent-purple: #B794F4;
+            --accent-pink: #FBB6CE;
+            --accent-blue: #90CDF4;
+            --accent-green: #9AE6B4;
+            --accent-yellow: #F6E05E;
+            --accent-orange: #F6AD55;
+            --border-color: #2D3748;
+            --success: #68D391;
+            --error: #FC8181;
+            --warning: #F6AD55;
+            --grid-color: rgba(74, 85, 104, 0.3);
+            --selection-color: rgba(183, 148, 244, 0.3);
+            --connection-color: #FBB6CE;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Layout */
+        .editor-container {
+            display: grid;
+            grid-template-rows: 48px 1fr 32px;
+            grid-template-columns: 60px 240px 1fr 280px;
+            height: 100vh;
+            gap: 1px;
+            background-color: var(--border-color);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            grid-column: 1 / -1;
+            background-color: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toolbar-section {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background-color: var(--border-color);
+        }
+
+        /* Tool Palette */
+        .tool-palette {
+            background-color: var(--bg-secondary);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .tool-button {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tool-button:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .tool-button.active {
+            background-color: var(--accent-purple);
+            color: var(--bg-primary);
+        }
+
+        .tool-button .tooltip {
+            position: absolute;
+            left: 100%;
+            margin-left: 8px;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+        }
+
+        .tool-button:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* Node Palette */
+        .node-palette {
+            background-color: var(--bg-secondary);
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .palette-section {
+            margin-bottom: 24px;
+        }
+
+        .palette-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.05em;
+        }
+
+        .node-template {
+            background-color: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .node-template:hover {
+            border-color: var(--accent-purple);
+            background-color: var(--bg-hover);
+            transform: translateX(4px);
+        }
+
+        .node-template.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            background-color: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            cursor: default;
+        }
+
+        #canvas.tool-pan {
+            cursor: grab;
+        }
+
+        #canvas.tool-pan.panning {
+            cursor: grabbing;
+        }
+
+        #canvas.tool-node {
+            cursor: crosshair;
+        }
+
+        #canvas.tool-connection {
+            cursor: pointer;
+        }
+
+        /* Grid Pattern */
+        .grid-pattern {
+            stroke: var(--grid-color);
+            stroke-width: 1;
+        }
+
+        /* Nodes */
+        .node {
+            cursor: move;
+            transition: filter 0.2s;
+        }
+
+        .node:hover {
+            filter: brightness(1.1);
+        }
+
+        .node.selected {
+            filter: drop-shadow(0 0 8px var(--accent-purple));
+        }
+
+        .node.has-canvas {
+            stroke-dasharray: 5,5;
+            stroke: var(--accent-blue);
+            stroke-width: 2;
+        }
+
+        .node-text {
+            pointer-events: none;
+            user-select: none;
+            fill: var(--text-primary);
+            text-anchor: middle;
+            dominant-baseline: middle;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Connections */
+        .connection {
+            fill: none;
+            stroke: var(--connection-color);
+            stroke-width: 2;
+            pointer-events: stroke;
+            cursor: pointer;
+            transition: stroke-width 0.2s;
+        }
+
+        .connection:hover {
+            stroke-width: 3;
+            stroke: var(--accent-pink);
+        }
+
+        .connection.selected {
+            stroke: var(--accent-purple);
+            stroke-width: 3;
+        }
+
+        .connection-arrow {
+            fill: var(--connection-color);
+        }
+
+        /* Selection Box */
+        .selection-box {
+            fill: var(--selection-color);
+            stroke: var(--accent-purple);
+            stroke-width: 1;
+            stroke-dasharray: 5,5;
+            pointer-events: none;
+        }
+
+        /* Properties Panel */
+        .properties-panel {
+            background-color: var(--bg-secondary);
+            padding: 16px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .property-group {
+            margin-bottom: 24px;
+        }
+
+        .property-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .property-input {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .property-input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(183, 148, 244, 0.2);
+        }
+
+        /* Code Editor */
+        .code-editor {
+            position: absolute;
+            bottom: 0;
+            left: 300px;
+            right: 280px;
+            height: 300px;
+            background-color: var(--bg-secondary);
+            border-top: 2px solid var(--border-color);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .code-editor.visible {
+            transform: translateY(0);
+        }
+
+        .code-editor-header {
+            height: 40px;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            justify-content: space-between;
+        }
+
+        .CodeMirror {
+            height: calc(100% - 40px);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+        }
+
+        .CodeMirror-gutters {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .CodeMirror-cursor {
+            border-left-color: var(--accent-purple);
+        }
+
+        .CodeMirror-selected {
+            background-color: var(--selection-color);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            display: none;
+            min-width: 180px;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--accent-purple);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 4px 0;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            grid-column: 1 / -1;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-purple);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-pink);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--accent-purple);
+        }
+
+        .btn-icon {
+            padding: 6px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        /* X-Ray Mode */
+        .xray-mode .node {
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .xray-mode .inner-canvas {
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .inner-canvas {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 16px;
+            right: 296px;
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 20, 25, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--bg-tertiary);
+            border-top-color: var(--accent-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .editor-container {
+                grid-template-columns: 60px 1fr;
+            }
+            
+            .node-palette,
+            .properties-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <button class="btn btn-secondary" onclick="editor.newDiagram()">New</button>
+                <button class="btn btn-secondary" onclick="editor.saveDiagram()">Save</button>
+                <button class="btn btn-secondary" onclick="editor.loadDiagram()">Open</button>
+            </div>
+            
+            <div class="toolbar-divider"></div>
+            
+            <div class="toolbar-section">
+                <button class="btn btn-icon" onclick="editor.undo()" title="Undo (Ctrl+Z)">↶</button>
+                <button class="btn btn-icon" onclick="editor.redo()" title="Redo (Ctrl+Y)">↷</button>
+            </div>
+            
+            <div class="toolbar-divider"></div>
+            
+            <div class="toolbar-section">
+                <button class="btn btn-secondary" onclick="editor.toggleCodeEditor()">
+                    <span>{ }</span> Code
+                </button>
+                <button class="btn btn-secondary" onclick="editor.exportDiagram()">Export</button>
+            </div>
+            
+            <div style="margin-left: auto;" class="toolbar-section">
+                <label style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="gridToggle" checked onchange="editor.toggleGrid()">
+                    Grid
+                </label>
+                <label style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="snapToggle" checked onchange="editor.toggleSnap()">
+                    Snap
+                </label>
+            </div>
+        </div>
+
+        <!-- Tool Palette -->
+        <div class="tool-palette">
+            <button class="tool-button active" data-tool="select" onclick="editor.setTool('select')">
+                <span>↖</span>
+                <span class="tooltip">Select Tool (V)</span>
+            </button>
+            <button class="tool-button" data-tool="pan" onclick="editor.setTool('pan')">
+                <span>✋</span>
+                <span class="tooltip">Pan Tool (H)</span>
+            </button>
+            <button class="tool-button" data-tool="node" onclick="editor.setTool('node')">
+                <span>□</span>
+                <span class="tooltip">Node Tool (N)</span>
+            </button>
+            <button class="tool-button" data-tool="connection" onclick="editor.setTool('connection')">
+                <span>→</span>
+                <span class="tooltip">Connection Tool (C)</span>
+            </button>
+        </div>
+
+        <!-- Node Palette -->
+        <div class="node-palette">
+            <div class="palette-section">
+                <div class="palette-title">Basic Shapes</div>
+                <div class="node-template" draggable="true" data-shape="rectangle" data-label="Process">
+                    □ Rectangle
+                </div>
+                <div class="node-template" draggable="true" data-shape="roundedRect" data-label="Start/End">
+                    ▢ Rounded
+                </div>
+                <div class="node-template" draggable="true" data-shape="diamond" data-label="Decision">
+                    ◇ Diamond
+                </div>
+                <div class="node-template" draggable="true" data-shape="circle" data-label="Connector">
+                    ○ Circle
+                </div>
+                <div class="node-template" draggable="true" data-shape="hexagon" data-label="Process">
+                    ⬡ Hexagon
+                </div>
+            </div>
+            
+            <div class="palette-section">
+                <div class="palette-title">Containers</div>
+                <div class="node-template" draggable="true" data-shape="container" data-label="Container">
+                    ▭ Container
+                </div>
+                <div class="node-template" draggable="true" data-shape="subgraph" data-label="Subgraph">
+                    ⊞ Subgraph
+                </div>
+            </div>
+            
+            <div class="palette-section">
+                <div class="palette-title">Templates</div>
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;" onclick="editor.loadTemplate('flowchart')">
+                    Flowchart
+                </button>
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;" onclick="editor.loadTemplate('sequence')">
+                    Sequence
+                </button>
+                <button class="btn btn-secondary" style="width: 100%;" onclick="editor.loadTemplate('stateDiagram')">
+                    State Diagram
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-wrapper">
+                <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" class="grid-pattern"/>
+                        </pattern>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" class="connection-arrow"/>
+                        </marker>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" id="gridBackground"/>
+                    <g id="viewport">
+                        <g id="connections"></g>
+                        <g id="nodes"></g>
+                        <g id="selection"></g>
+                    </g>
+                </svg>
+            </div>
+            
+            <!-- Zoom Controls -->
+            <div class="zoom-controls">
+                <button class="btn btn-icon" onclick="editor.zoomIn()">+</button>
+                <button class="btn btn-icon" onclick="editor.resetZoom()">100%</button>
+                <button class="btn btn-icon" onclick="editor.zoomOut()">−</button>
+                <button class="btn btn-icon" onclick="editor.fitToScreen()">⊡</button>
+            </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="properties-panel">
+            <div id="nodeProperties" style="display: none;">
+                <div class="property-group">
+                    <div class="palette-title">Node Properties</div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Label</label>
+                        <input type="text" class="property-input" id="nodeLabel" onchange="editor.updateNodeProperty('label')">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Shape</label>
+                        <select class="property-input" id="nodeShape" onchange="editor.updateNodeProperty('shape')">
+                            <option value="rectangle">Rectangle</option>
+                            <option value="roundedRect">Rounded Rectangle</option>
+                            <option value="diamond">Diamond</option>
+                            <option value="circle">Circle</option>
+                            <option value="hexagon">Hexagon</option>
+                            <option value="container">Container</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Width</label>
+                        <input type="number" class="property-input" id="nodeWidth" onchange="editor.updateNodeProperty('width')">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Height</label>
+                        <input type="number" class="property-input" id="nodeHeight" onchange="editor.updateNodeProperty('height')">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="connectionProperties" style="display: none;">
+                <div class="property-group">
+                    <div class="palette-title">Connection Properties</div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Label</label>
+                        <input type="text" class="property-input" id="connectionLabel" onchange="editor.updateConnectionProperty('label')">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="property-label">Style</label>
+                        <select class="property-input" id="connectionStyle" onchange="editor.updateConnectionProperty('style')">
+                            <option value="solid">Solid</option>
+                            <option value="dashed">Dashed</option>
+                            <option value="dotted">Dotted</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="defaultProperties">
+                <div class="property-group">
+                    <div class="palette-title">Properties</div>
+                    <p style="color: var(--text-muted); font-size: 14px;">
+                        Select an element to view its properties
+                    </p>
+                </div>
+                
+                <div class="property-group">
+                    <div class="palette-title">Shortcuts</div>
+                    <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
+                        <div>V - Select Tool</div>
+                        <div>H - Pan Tool</div>
+                        <div>N - Node Tool</div>
+                        <div>C - Connection Tool</div>
+                        <div>Delete - Delete Selected</div>
+                        <div>Ctrl+A - Select All</div>
+                        <div>Ctrl+D - Duplicate</div>
+                        <div>Ctrl+Z - Undo</div>
+                        <div>Ctrl+Y - Redo</div>
+                        <div>Alt+X - X-Ray Vision</div>
+                        <div>Space+Drag - Pan Canvas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="statusTool">Select Tool</span>
+            </div>
+            <div class="status-item">
+                <span>Zoom: <span id="statusZoom">100%</span></span>
+            </div>
+            <div class="status-item">
+                <span>Objects: <span id="statusObjects">0 nodes, 0 connections</span></span>
+            </div>
+            <div class="status-item" style="margin-left: auto;">
+                <span id="statusMessage">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Editor -->
+    <div class="code-editor" id="codeEditor">
+        <div class="code-editor-header">
+            <span style="font-weight: 600;">Mermaid Code</span>
+            <button class="btn btn-icon" onclick="editor.toggleCodeEditor()">×</button>
+        </div>
+        <textarea id="codeEditorTextarea"></textarea>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="editor.contextAction('copy')">
+            <span>📋</span> Copy
+        </div>
+        <div class="context-menu-item" onclick="editor.contextAction('paste')">
+            <span>📄</span> Paste
+        </div>
+        <div class="context-menu-item" onclick="editor.contextAction('duplicate')">
+            <span>📑</span> Duplicate
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="editor.contextAction('delete')">
+            <span>🗑️</span> Delete
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="editor.contextAction('bringToFront')">
+            <span>⬆️</span> Bring to Front
+        </div>
+        <div class="context-menu-item" onclick="editor.contextAction('sendToBack')">
+            <span>⬇️</span> Send to Back
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="editor.contextAction('createCanvas')">
+            <span>📦</span> Create Inner Canvas
+        </div>
+    </div>
+
+    <script type="module">
+        // ===== Core Classes =====
+        
+        // EventBus for decoupled communication
+        class EventBus {
+            constructor() {
+                this.events = {};
+            }
+            
+            on(event, handler) {
+                if (!this.events[event]) {
+                    this.events[event] = [];
+                }
+                this.events[event].push(handler);
+            }
+            
+            off(event, handler) {
+                if (!this.events[event]) return;
+                this.events[event] = this.events[event].filter(h => h !== handler);
+            }
+            
+            emit(event, data) {
+                if (!this.events[event]) return;
+                this.events[event].forEach(handler => handler(data));
+            }
+        }
+
+        // State management with immutable updates
+        class State {
+            constructor() {
+                this.data = {
+                    diagram: {
+                        nodes: new Map(),
+                        connections: new Map(),
+                        groups: new Map()
+                    },
+                    selection: {
+                        nodes: new Set(),
+                        connections: new Set()
+                    },
+                    ui: {
+                        tool: 'select',
+                        zoom: 1.0,
+                        pan: { x: 0, y: 0 },
+                        showGrid: true,
+                        snapToGrid: true,
+                        gridSize: 20
+                    },
+                    clipboard: null,
+                    dragState: null,
+                    connectionState: null
+                };
+                
+                this.listeners = [];
+            }
+            
+            subscribe(listener) {
+                this.listeners.push(listener);
+                return () => {
+                    this.listeners = this.listeners.filter(l => l !== listener);
+                };
+            }
+            
+            update(updater) {
+                const newData = JSON.parse(JSON.stringify(this.data));
+                updater(newData);
+                this.data = newData;
+                this.notify();
+            }
+            
+            notify() {
+                this.listeners.forEach(listener => listener(this.data));
+            }
+            
+            getState() {
+                return this.data;
+            }
+        }
+
+        // History management for undo/redo
+        class History {
+            constructor(state) {
+                this.state = state;
+                this.past = [];
+                this.future = [];
+                this.maxHistory = 50;
+            }
+            
+            push(action) {
+                const currentState = JSON.stringify(this.state.getState());
+                this.past.push(currentState);
+                if (this.past.length > this.maxHistory) {
+                    this.past.shift();
+                }
+                this.future = [];
+            }
+            
+            undo() {
+                if (this.past.length === 0) return false;
+                
+                const currentState = JSON.stringify(this.state.getState());
+                this.future.push(currentState);
+                
+                const previousState = this.past.pop();
+                const parsed = JSON.parse(previousState);
+                
+                // Restore Maps and Sets
+                parsed.diagram.nodes = new Map(Object.entries(parsed.diagram.nodes));
+                parsed.diagram.connections = new Map(Object.entries(parsed.diagram.connections));
+                parsed.selection.nodes = new Set(parsed.selection.nodes);
+                parsed.selection.connections = new Set(parsed.selection.connections);
+                
+                this.state.data = parsed;
+                this.state.notify();
+                return true;
+            }
+            
+            redo() {
+                if (this.future.length === 0) return false;
+                
+                const currentState = JSON.stringify(this.state.getState());
+                this.past.push(currentState);
+                
+                const nextState = this.future.pop();
+                const parsed = JSON.parse(nextState);
+                
+                // Restore Maps and Sets
+                parsed.diagram.nodes = new Map(Object.entries(parsed.diagram.nodes));
+                parsed.diagram.connections = new Map(Object.entries(parsed.diagram.connections));
+                parsed.selection.nodes = new Set(parsed.selection.nodes);
+                parsed.selection.connections = new Set(parsed.selection.connections);
+                
+                this.state.data = parsed;
+                this.state.notify();
+                return true;
+            }
+        }
+
+        // Node class
+        class Node {
+            constructor(id, data) {
+                this.id = id;
+                this.data = {
+                    x: 100,
+                    y: 100,
+                    width: 120,
+                    height: 60,
+                    label: 'Node',
+                    shape: 'rectangle',
+                    hasCanvas: false,
+                    innerCanvas: null,
+                    ...data
+                };
+            }
+            
+            render(svg, selected = false) {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('transform', `translate(${this.data.x}, ${this.data.y})`);
+                g.setAttribute('data-node-id', this.id);
+                g.classList.add('node');
+                if (selected) g.classList.add('selected');
+                if (this.data.hasCanvas) g.classList.add('has-canvas');
+                
+                let shape;
+                switch (this.data.shape) {
+                    case 'rectangle':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        shape.setAttribute('x', -this.data.width / 2);
+                        shape.setAttribute('y', -this.data.height / 2);
+                        shape.setAttribute('width', this.data.width);
+                        shape.setAttribute('height', this.data.height);
+                        shape.setAttribute('rx', 4);
+                        shape.setAttribute('fill', '#2D3748');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        break;
+                        
+                    case 'roundedRect':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        shape.setAttribute('x', -this.data.width / 2);
+                        shape.setAttribute('y', -this.data.height / 2);
+                        shape.setAttribute('width', this.data.width);
+                        shape.setAttribute('height', this.data.height);
+                        shape.setAttribute('rx', 20);
+                        shape.setAttribute('fill', '#2D3748');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        break;
+                        
+                    case 'diamond':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const w = this.data.width / 2;
+                        const h = this.data.height / 2;
+                        shape.setAttribute('d', `M 0 -${h} L ${w} 0 L 0 ${h} L -${w} 0 Z`);
+                        shape.setAttribute('fill', '#2D3748');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        break;
+                        
+                    case 'circle':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        shape.setAttribute('cx', 0);
+                        shape.setAttribute('cy', 0);
+                        shape.setAttribute('r', Math.min(this.data.width, this.data.height) / 2);
+                        shape.setAttribute('fill', '#2D3748');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        break;
+                        
+                    case 'hexagon':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const hw = this.data.width / 2;
+                        const hh = this.data.height / 2;
+                        const points = [
+                            [-hw * 0.5, -hh],
+                            [hw * 0.5, -hh],
+                            [hw, 0],
+                            [hw * 0.5, hh],
+                            [-hw * 0.5, hh],
+                            [-hw, 0]
+                        ];
+                        const pathData = 'M ' + points.map(p => p.join(' ')).join(' L ') + ' Z';
+                        shape.setAttribute('d', pathData);
+                        shape.setAttribute('fill', '#2D3748');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        break;
+                        
+                    case 'container':
+                        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        shape.setAttribute('x', -this.data.width / 2);
+                        shape.setAttribute('y', -this.data.height / 2);
+                        shape.setAttribute('width', this.data.width);
+                        shape.setAttribute('height', this.data.height);
+                        shape.setAttribute('rx', 8);
+                        shape.setAttribute('fill', 'rgba(45, 55, 72, 0.5)');
+                        shape.setAttribute('stroke', '#4A5568');
+                        shape.setAttribute('stroke-width', 2);
+                        shape.setAttribute('stroke-dasharray', '5,5');
+                        break;
+                }
+                
+                g.appendChild(shape);
+                
+                // Add text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.classList.add('node-text');
+                text.textContent = this.data.label;
+                g.appendChild(text);
+                
+                // Add inner canvas indicator if needed
+                if (this.data.hasCanvas) {
+                    const indicator = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    indicator.setAttribute('x', this.data.width / 2 - 20);
+                    indicator.setAttribute('y', -this.data.height / 2 + 15);
+                    indicator.setAttribute('font-size', '12');
+                    indicator.setAttribute('fill', '#90CDF4');
+                    indicator.textContent = '📦';
+                    g.appendChild(indicator);
+                }
+                
+                return g;
+            }
+        }
+
+        // Connection class
+        class Connection {
+            constructor(id, data) {
+                this.id = id;
+                this.data = {
+                    sourceId: null,
+                    targetId: null,
+                    label: '',
+                    style: 'solid',
+                    ...data
+                };
+            }
+            
+            render(svg, nodes, selected = false) {
+                const source = nodes.get(this.data.sourceId);
+                const target = nodes.get(this.data.targetId);
+                
+                if (!source || !target) return null;
+                
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('data-connection-id', this.id);
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.classList.add('connection');
+                if (selected) path.classList.add('selected');
+                
+                // Calculate connection points
+                const sx = source.data.x;
+                const sy = source.data.y;
+                const tx = target.data.x;
+                const ty = target.data.y;
+                
+                // Simple bezier curve
+                const dx = tx - sx;
+                const dy = ty - sy;
+                const cx = sx + dx / 2;
+                const cy = sy + dy / 2;
+                
+                const pathData = `M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`;
+                path.setAttribute('d', pathData);
+                
+                if (this.data.style === 'dashed') {
+                    path.setAttribute('stroke-dasharray', '5,5');
+                } else if (this.data.style === 'dotted') {
+                    path.setAttribute('stroke-dasharray', '2,2');
+                }
+                
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                
+                g.appendChild(path);
+                
+                // Add label if present
+                if (this.data.label) {
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', cx);
+                    text.setAttribute('y', cy - 10);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('font-size', '12');
+                    text.setAttribute('fill', '#E2E8F0');
+                    text.textContent = this.data.label;
+                    g.appendChild(text);
+                }
+                
+                return g;
+            }
+        }
+
+        // Main Editor class
+        class MermaidEditor {
+            constructor() {
+                this.eventBus = new EventBus();
+                this.state = new State();
+                this.history = new History(this.state);
+                
+                this.canvas = document.getElementById('canvas');
+                this.viewport = document.getElementById('viewport');
+                this.nodesGroup = document.getElementById('nodes');
+                this.connectionsGroup = document.getElementById('connections');
+                this.selectionGroup = document.getElementById('selection');
+                
+                this.codeEditor = null;
+                this.initCodeEditor();
+                
+                this.isDragging = false;
+                this.isPanning = false;
+                this.isSelecting = false;
+                this.selectionBox = null;
+                this.dragOffset = { x: 0, y: 0 };
+                this.panStart = { x: 0, y: 0 };
+                this.contextMenuPoint = null;
+                this.spacePressed = false;
+                
+                this.bindEvents();
+                this.setupKeyboardShortcuts();
+                this.loadFromStorage();
+                
+                // Subscribe to state changes
+                this.state.subscribe((state) => {
+                    this.render();
+                    this.updateStatusBar();
+                    this.updatePropertyPanel();
+                    this.syncCodeEditor();
+                });
+                
+                // Initial render
+                this.render();
+            }
+            
+            initCodeEditor() {
+                const textarea = document.getElementById('codeEditorTextarea');
+                this.codeEditor = CodeMirror.fromTextArea(textarea, {
+                    mode: 'javascript',
+                    theme: 'monokai',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    autoCloseBrackets: true,
+                    matchBrackets: true
+                });
+                
+                // Debounced sync from code to visual
+                let syncTimeout;
+                this.codeEditor.on('change', () => {
+                    clearTimeout(syncTimeout);
+                    syncTimeout = setTimeout(() => {
+                        this.parseCodeToVisual();
+                    }, 500);
+                });
+            }
+            
+            bindEvents() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+                this.canvas.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
+                
+                // Drag and drop
+                const nodeTemplates = document.querySelectorAll('.node-template');
+                nodeTemplates.forEach(template => {
+                    template.addEventListener('dragstart', (e) => this.handleDragStart(e));
+                    template.addEventListener('dragend', (e) => {
+                        e.target.classList.remove('dragging');
+                    });
+                });
+                
+                this.canvas.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                });
+                this.canvas.addEventListener('drop', (e) => this.handleDrop(e));
+                
+                // Window events
+                window.addEventListener('resize', () => this.handleResize());
+                
+                // Hide context menu on click
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.context-menu')) {
+                        document.getElementById('contextMenu').classList.remove('visible');
+                    }
+                });
+            }
+            
+            setupKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // X-ray vision
+                    if (e.altKey && e.key === 'x') {
+                        this.canvas.classList.add('xray-mode');
+                    }
+                    
+                    // Tool shortcuts
+                    if (!e.ctrlKey && !e.metaKey) {
+                        switch(e.key.toLowerCase()) {
+                            case 'v':
+                                this.setTool('select');
+                                break;
+                            case 'h':
+                                this.setTool('pan');
+                                break;
+                            case 'n':
+                                this.setTool('node');
+                                break;
+                            case 'c':
+                                this.setTool('connection');
+                                break;
+                            case 'delete':
+                                this.deleteSelected();
+                                break;
+                        }
+                    }
+                    
+                    // Ctrl shortcuts
+                    if (e.ctrlKey || e.metaKey) {
+                        switch(e.key.toLowerCase()) {
+                            case 'z':
+                                e.preventDefault();
+                                this.undo();
+                                break;
+                            case 'y':
+                                e.preventDefault();
+                                this.redo();
+                                break;
+                            case 'c':
+                                e.preventDefault();
+                                this.copy();
+                                break;
+                            case 'v':
+                                e.preventDefault();
+                                this.paste();
+                                break;
+                            case 'd':
+                                e.preventDefault();
+                                this.duplicate();
+                                break;
+                            case 'a':
+                                e.preventDefault();
+                                this.selectAll();
+                                break;
+                            case 's':
+                                e.preventDefault();
+                                this.saveDiagram();
+                                break;
+                        }
+                    }
+                    
+                    // Space for pan
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.spacePressed = true;
+                        this.canvas.style.cursor = 'grab';
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    // Release x-ray
+                    if (!e.altKey) {
+                        this.canvas.classList.remove('xray-mode');
+                    }
+                    
+                    // Release space pan
+                    if (e.key === ' ') {
+                        this.spacePressed = false;
+                        const tool = this.state.getState().ui.tool;
+                        this.updateCursor(tool);
+                    }
+                });
+            }
+            
+            handleMouseDown(e) {
+                const state = this.state.getState();
+                const point = this.getMousePosition(e);
+                
+                // Check for space+drag pan
+                const spacePressed = this.spacePressed || false;
+                if (e.buttons === 1 && spacePressed) {
+                    this.isPanning = true;
+                    this.panStart = point;
+                    this.canvas.style.cursor = 'grabbing';
+                    return;
+                }
+                
+                switch(state.ui.tool) {
+                    case 'select':
+                        this.handleSelectMouseDown(e, point);
+                        break;
+                    case 'pan':
+                        this.isPanning = true;
+                        this.panStart = point;
+                        this.canvas.classList.add('panning');
+                        break;
+                    case 'node':
+                        if (e.button === 2) { // Right click
+                            this.showNodeCreationMenu(point);
+                        }
+                        break;
+                    case 'connection':
+                        this.handleConnectionMouseDown(e, point);
+                        break;
+                }
+            }
+            
+            handleMouseMove(e) {
+                const point = this.getMousePosition(e);
+                
+                if (this.isPanning) {
+                    const state = this.state.getState();
+                    const dx = point.x - this.panStart.x;
+                    const dy = point.y - this.panStart.y;
+                    
+                    this.state.update(s => {
+                        s.ui.pan.x += dx;
+                        s.ui.pan.y += dy;
+                    });
+                    
+                    this.panStart = point;
+                } else if (this.isDragging) {
+                    this.handleNodeDrag(point);
+                } else if (this.isSelecting) {
+                    this.updateSelectionBox(point);
+                }
+            }
+            
+            handleMouseUp(e) {
+                this.isPanning = false;
+                this.isDragging = false;
+                this.canvas.classList.remove('panning');
+                
+                if (this.isSelecting) {
+                    this.finishSelectionBox();
+                    this.isSelecting = false;
+                }
+                
+                const tool = this.state.getState().ui.tool;
+                this.updateCursor(tool);
+            }
+            
+            handleWheel(e) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                this.zoom(delta, this.getMousePosition(e));
+            }
+            
+            handleContextMenu(e) {
+                e.preventDefault();
+                const point = this.getMousePosition(e);
+                const element = this.getElementAt(point);
+                
+                this.contextMenuPoint = point;
+                
+                const menu = document.getElementById('contextMenu');
+                menu.innerHTML = '';
+                
+                if (element) {
+                    // Context menu for elements
+                    menu.innerHTML = `
+                        <div class="context-menu-item" onclick="editor.contextAction('copy')">
+                            <span>📋</span> Copy
+                        </div>
+                        <div class="context-menu-item" onclick="editor.contextAction('paste')">
+                            <span>📄</span> Paste
+                        </div>
+                        <div class="context-menu-item" onclick="editor.contextAction('duplicate')">
+                            <span>📑</span> Duplicate
+                        </div>
+                        <div class="context-menu-divider"></div>
+                        <div class="context-menu-item" onclick="editor.contextAction('delete')">
+                            <span>🗑️</span> Delete
+                        </div>
+                        <div class="context-menu-divider"></div>
+                        <div class="context-menu-item" onclick="editor.contextAction('bringToFront')">
+                            <span>⬆️</span> Bring to Front
+                        </div>
+                        <div class="context-menu-item" onclick="editor.contextAction('sendToBack')">
+                            <span>⬇️</span> Send to Back
+                        </div>
+                        ${element.type === 'node' ? `
+                        <div class="context-menu-divider"></div>
+                        <div class="context-menu-item" onclick="editor.contextAction('createCanvas')">
+                            <span>📦</span> Create Inner Canvas
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    // Context menu for background
+                    menu.innerHTML = `
+                        <div class="context-menu-item" onclick="editor.createNodeAtContextMenu('rectangle')">
+                            <span>□</span> New Rectangle
+                        </div>
+                        <div class="context-menu-item" onclick="editor.createNodeAtContextMenu('roundedRect')">
+                            <span>▢</span> New Rounded Rectangle
+                        </div>
+                        <div class="context-menu-item" onclick="editor.createNodeAtContextMenu('diamond')">
+                            <span>◇</span> New Diamond
+                        </div>
+                        <div class="context-menu-item" onclick="editor.createNodeAtContextMenu('circle')">
+                            <span>○</span> New Circle
+                        </div>
+                        <div class="context-menu-item" onclick="editor.createNodeAtContextMenu('hexagon')">
+                            <span>⬡</span> New Hexagon
+                        </div>
+                        <div class="context-menu-divider"></div>
+                        <div class="context-menu-item" onclick="editor.contextAction('paste')">
+                            <span>📄</span> Paste
+                        </div>
+                        <div class="context-menu-divider"></div>
+                        <div class="context-menu-item" onclick="editor.selectAll()">
+                            <span>⬜</span> Select All
+                        </div>
+                    `;
+                }
+                
+                menu.style.left = e.clientX + 'px';
+                menu.style.top = e.clientY + 'px';
+                menu.classList.add('visible');
+            }
+            
+            handleSelectMouseDown(e, point) {
+                const element = this.getElementAt(point);
+                
+                if (element) {
+                    const isSelected = this.isSelected(element);
+                    
+                    if (!e.shiftKey && !isSelected) {
+                        this.clearSelection();
+                    }
+                    
+                    this.toggleSelection(element);
+                    
+                    if (element.type === 'node') {
+                        this.isDragging = true;
+                        const node = this.state.getState().diagram.nodes.get(element.id);
+                        this.dragOffset = {
+                            x: point.x - node.data.x,
+                            y: point.y - node.data.y
+                        };
+                    }
+                } else {
+                    // Start selection box
+                    if (!e.shiftKey) {
+                        this.clearSelection();
+                    }
+                    this.isSelecting = true;
+                    this.selectionStart = point;
+                    this.createSelectionBox(point);
+                }
+            }
+            
+            handleConnectionMouseDown(e, point) {
+                const element = this.getElementAt(point);
+                
+                if (element && element.type === 'node') {
+                    const state = this.state.getState();
+                    
+                    if (!state.connectionState) {
+                        // First click - start connection
+                        this.state.update(s => {
+                            s.connectionState = {
+                                sourceId: element.id,
+                                targetId: null
+                            };
+                        });
+                        this.showMessage('Click another node to create connection');
+                    } else if (state.connectionState.sourceId !== element.id) {
+                        // Second click - create connection
+                        this.createConnection(state.connectionState.sourceId, element.id);
+                        this.state.update(s => {
+                            s.connectionState = null;
+                        });
+                    }
+                }
+            }
+            
+            handleNodeDrag(point) {
+                const state = this.state.getState();
+                const selectedNodes = Array.from(state.selection.nodes);
+                
+                if (selectedNodes.length === 0) return;
+                
+                this.history.push('drag');
+                
+                this.state.update(s => {
+                    selectedNodes.forEach(nodeId => {
+                        const node = s.diagram.nodes.get(nodeId);
+                        if (node) {
+                            const newX = point.x - this.dragOffset.x;
+                            const newY = point.y - this.dragOffset.y;
+                            
+                            // Snap to grid if enabled
+                            if (s.ui.snapToGrid) {
+                                node.data.x = Math.round(newX / s.ui.gridSize) * s.ui.gridSize;
+                                node.data.y = Math.round(newY / s.ui.gridSize) * s.ui.gridSize;
+                            } else {
+                                node.data.x = newX;
+                                node.data.y = newY;
+                            }
+                        }
+                    });
+                });
+            }
+            
+            handleDragStart(e) {
+                const template = e.target;
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('shape', template.dataset.shape);
+                e.dataTransfer.setData('label', template.dataset.label);
+                template.classList.add('dragging');
+            }
+            
+            handleDrop(e) {
+                e.preventDefault();
+                const shape = e.dataTransfer.getData('shape');
+                const label = e.dataTransfer.getData('label');
+                
+                if (shape) {
+                    const point = this.getMousePosition(e);
+                    this.createNode(point, { shape, label });
+                }
+                
+                // Remove dragging class
+                document.querySelectorAll('.node-template.dragging').forEach(t => {
+                    t.classList.remove('dragging');
+                });
+            }
+            
+            getMousePosition(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const state = this.state.getState();
+                return {
+                    x: (e.clientX - rect.left - state.ui.pan.x) / state.ui.zoom,
+                    y: (e.clientY - rect.top - state.ui.pan.y) / state.ui.zoom
+                };
+            }
+            
+            getElementAt(point) {
+                const state = this.state.getState();
+                
+                // Check nodes (in reverse order for proper z-index)
+                const nodeElements = Array.from(this.nodesGroup.children).reverse();
+                for (const element of nodeElements) {
+                    const nodeId = element.getAttribute('data-node-id');
+                    const node = state.diagram.nodes.get(nodeId);
+                    if (node && this.pointInNode(point, node)) {
+                        return { type: 'node', id: nodeId };
+                    }
+                }
+                
+                // Check connections
+                for (const [id, connection] of state.diagram.connections) {
+                    if (this.pointOnConnection(point, connection, state.diagram.nodes)) {
+                        return { type: 'connection', id };
+                    }
+                }
+                
+                return null;
+            }
+            
+            pointInNode(point, node) {
+                const halfWidth = node.data.width / 2;
+                const halfHeight = node.data.height / 2;
+                return point.x >= node.data.x - halfWidth &&
+                       point.x <= node.data.x + halfWidth &&
+                       point.y >= node.data.y - halfHeight &&
+                       point.y <= node.data.y + halfHeight;
+            }
+            
+            pointOnConnection(point, connection, nodes) {
+                // Simplified - just check distance to line
+                const source = nodes.get(connection.data.sourceId);
+                const target = nodes.get(connection.data.targetId);
+                if (!source || !target) return false;
+                
+                const dist = this.pointToLineDistance(
+                    point,
+                    { x: source.data.x, y: source.data.y },
+                    { x: target.data.x, y: target.data.y }
+                );
+                
+                return dist < 10; // 10px threshold
+            }
+            
+            pointToLineDistance(point, start, end) {
+                const A = point.x - start.x;
+                const B = point.y - start.y;
+                const C = end.x - start.x;
+                const D = end.y - start.y;
+                
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                
+                if (lenSq !== 0) {
+                    param = dot / lenSq;
+                }
+                
+                let xx, yy;
+                
+                if (param < 0) {
+                    xx = start.x;
+                    yy = start.y;
+                } else if (param > 1) {
+                    xx = end.x;
+                    yy = end.y;
+                } else {
+                    xx = start.x + param * C;
+                    yy = start.y + param * D;
+                }
+                
+                const dx = point.x - xx;
+                const dy = point.y - yy;
+                
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            createNode(position, data = {}) {
+                this.history.push('createNode');
+                
+                const id = 'node_' + Date.now();
+                const node = new Node(id, {
+                    ...data,
+                    x: position.x,
+                    y: position.y
+                });
+                
+                this.state.update(s => {
+                    s.diagram.nodes.set(id, node);
+                });
+                
+                this.showMessage('Node created');
+                return id;
+            }
+            
+            createConnection(sourceId, targetId) {
+                // Check if connection already exists
+                const state = this.state.getState();
+                for (const connection of state.diagram.connections.values()) {
+                    if (connection.data.sourceId === sourceId && connection.data.targetId === targetId) {
+                        this.showMessage('Connection already exists', 'warning');
+                        return;
+                    }
+                }
+                
+                this.history.push('createConnection');
+                
+                const id = 'connection_' + Date.now();
+                const connection = new Connection(id, {
+                    sourceId,
+                    targetId
+                });
+                
+                this.state.update(s => {
+                    s.diagram.connections.set(id, connection);
+                });
+                
+                this.showMessage('Connection created');
+            }
+            
+            deleteSelected() {
+                const state = this.state.getState();
+                if (state.selection.nodes.size === 0 && state.selection.connections.size === 0) {
+                    return;
+                }
+                
+                this.history.push('delete');
+                
+                this.state.update(s => {
+                    // Delete selected connections
+                    for (const connId of s.selection.connections) {
+                        s.diagram.connections.delete(connId);
+                    }
+                    
+                    // Delete selected nodes and their connections
+                    for (const nodeId of s.selection.nodes) {
+                        s.diagram.nodes.delete(nodeId);
+                        
+                        // Delete connections to/from this node
+                        for (const [connId, conn] of s.diagram.connections) {
+                            if (conn.data.sourceId === nodeId || conn.data.targetId === nodeId) {
+                                s.diagram.connections.delete(connId);
+                            }
+                        }
+                    }
+                    
+                    // Clear selection
+                    s.selection.nodes.clear();
+                    s.selection.connections.clear();
+                });
+                
+                this.showMessage('Deleted selected elements');
+            }
+            
+            clearSelection() {
+                this.state.update(s => {
+                    s.selection.nodes.clear();
+                    s.selection.connections.clear();
+                });
+            }
+            
+            toggleSelection(element) {
+                this.state.update(s => {
+                    const set = element.type === 'node' ? s.selection.nodes : s.selection.connections;
+                    if (set.has(element.id)) {
+                        set.delete(element.id);
+                    } else {
+                        set.add(element.id);
+                    }
+                });
+            }
+            
+            isSelected(element) {
+                const state = this.state.getState();
+                const set = element.type === 'node' ? state.selection.nodes : state.selection.connections;
+                return set.has(element.id);
+            }
+            
+            selectAll() {
+                this.state.update(s => {
+                    s.selection.nodes = new Set(s.diagram.nodes.keys());
+                    s.selection.connections = new Set(s.diagram.connections.keys());
+                });
+                document.getElementById('contextMenu').classList.remove('visible');
+            }
+            
+            createNodeAtContextMenu(shape) {
+                if (this.contextMenuPoint) {
+                    this.createNode(this.contextMenuPoint, { shape, label: 'New ' + shape });
+                    document.getElementById('contextMenu').classList.remove('visible');
+                }
+            }
+            
+            createSelectionBox(point) {
+                this.selectionBox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                this.selectionBox.classList.add('selection-box');
+                this.selectionBox.setAttribute('x', point.x);
+                this.selectionBox.setAttribute('y', point.y);
+                this.selectionBox.setAttribute('width', 0);
+                this.selectionBox.setAttribute('height', 0);
+                this.selectionGroup.appendChild(this.selectionBox);
+            }
+            
+            updateSelectionBox(point) {
+                if (!this.selectionBox) return;
+                
+                const x = Math.min(this.selectionStart.x, point.x);
+                const y = Math.min(this.selectionStart.y, point.y);
+                const width = Math.abs(point.x - this.selectionStart.x);
+                const height = Math.abs(point.y - this.selectionStart.y);
+                
+                this.selectionBox.setAttribute('x', x);
+                this.selectionBox.setAttribute('y', y);
+                this.selectionBox.setAttribute('width', width);
+                this.selectionBox.setAttribute('height', height);
+            }
+            
+            finishSelectionBox() {
+                if (!this.selectionBox) return;
+                
+                const rect = {
+                    x: parseFloat(this.selectionBox.getAttribute('x')),
+                    y: parseFloat(this.selectionBox.getAttribute('y')),
+                    width: parseFloat(this.selectionBox.getAttribute('width')),
+                    height: parseFloat(this.selectionBox.getAttribute('height'))
+                };
+                
+                // Select nodes in box
+                const state = this.state.getState();
+                this.state.update(s => {
+                    for (const [id, node] of s.diagram.nodes) {
+                        if (this.nodeInRect(node, rect)) {
+                            s.selection.nodes.add(id);
+                        }
+                    }
+                });
+                
+                // Clean up
+                this.selectionGroup.removeChild(this.selectionBox);
+                this.selectionBox = null;
+            }
+            
+            nodeInRect(node, rect) {
+                return node.data.x >= rect.x &&
+                       node.data.x <= rect.x + rect.width &&
+                       node.data.y >= rect.y &&
+                       node.data.y <= rect.y + rect.height;
+            }
+            
+            setTool(tool) {
+                this.state.update(s => {
+                    s.ui.tool = tool;
+                });
+                
+                // Update UI
+                document.querySelectorAll('.tool-button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tool === tool);
+                });
+                
+                this.updateCursor(tool);
+                document.getElementById('statusTool').textContent = tool.charAt(0).toUpperCase() + tool.slice(1) + ' Tool';
+            }
+            
+            updateCursor(tool) {
+                this.canvas.className = '';
+                this.canvas.classList.add('tool-' + tool);
+            }
+            
+            zoom(factor, center) {
+                const state = this.state.getState();
+                const newZoom = Math.max(0.1, Math.min(5, state.ui.zoom * factor));
+                
+                this.state.update(s => {
+                    // Adjust pan to zoom around center
+                    s.ui.pan.x = center.x + (s.ui.pan.x - center.x) * (newZoom / s.ui.zoom);
+                    s.ui.pan.y = center.y + (s.ui.pan.y - center.y) * (newZoom / s.ui.zoom);
+                    s.ui.zoom = newZoom;
+                });
+            }
+            
+            zoomIn() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.zoom(1.2, { x: rect.width / 2, y: rect.height / 2 });
+            }
+            
+            zoomOut() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.zoom(0.8, { x: rect.width / 2, y: rect.height / 2 });
+            }
+            
+            resetZoom() {
+                this.state.update(s => {
+                    s.ui.zoom = 1;
+                    s.ui.pan = { x: 0, y: 0 };
+                });
+            }
+            
+            fitToScreen() {
+                const state = this.state.getState();
+                if (state.diagram.nodes.size === 0) return;
+                
+                // Calculate bounds
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+                
+                for (const node of state.diagram.nodes.values()) {
+                    minX = Math.min(minX, node.data.x - node.data.width / 2);
+                    minY = Math.min(minY, node.data.y - node.data.height / 2);
+                    maxX = Math.max(maxX, node.data.x + node.data.width / 2);
+                    maxY = Math.max(maxY, node.data.y + node.data.height / 2);
+                }
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const padding = 50;
+                
+                const scaleX = (rect.width - padding * 2) / (maxX - minX);
+                const scaleY = (rect.height - padding * 2) / (maxY - minY);
+                const scale = Math.min(scaleX, scaleY, 2);
+                
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                
+                this.state.update(s => {
+                    s.ui.zoom = scale;
+                    s.ui.pan.x = rect.width / 2 - centerX * scale;
+                    s.ui.pan.y = rect.height / 2 - centerY * scale;
+                });
+            }
+            
+            toggleGrid() {
+                this.state.update(s => {
+                    s.ui.showGrid = !s.ui.showGrid;
+                });
+                
+                document.getElementById('gridBackground').style.display = 
+                    this.state.getState().ui.showGrid ? 'block' : 'none';
+            }
+            
+            toggleSnap() {
+                this.state.update(s => {
+                    s.ui.snapToGrid = !s.ui.snapToGrid;
+                });
+            }
+            
+            toggleCodeEditor() {
+                const editor = document.getElementById('codeEditor');
+                editor.classList.toggle('visible');
+                
+                if (editor.classList.contains('visible')) {
+                    this.syncCodeEditor();
+                    this.codeEditor.refresh();
+                }
+            }
+            
+            syncCodeEditor() {
+                const mermaidCode = this.generateMermaidCode();
+                this.codeEditor.setValue(mermaidCode);
+            }
+            
+            generateMermaidCode() {
+                const state = this.state.getState();
+                let code = 'graph TD\n';
+                
+                // Add nodes
+                for (const [id, node] of state.diagram.nodes) {
+                    const shape = this.getMermaidShape(node.data.shape);
+                    code += `    ${id}${shape[0]}${node.data.label}${shape[1]}\n`;
+                }
+                
+                // Add connections
+                for (const connection of state.diagram.connections.values()) {
+                    const arrow = connection.data.style === 'dashed' ? '-.->': '-->';
+                    const label = connection.data.label ? `|${connection.data.label}|` : '';
+                    code += `    ${connection.data.sourceId} ${arrow}${label} ${connection.data.targetId}\n`;
+                }
+                
+                return code;
+            }
+            
+            getMermaidShape(shape) {
+                switch(shape) {
+                    case 'rectangle': return ['[', ']'];
+                    case 'roundedRect': return ['(', ')'];
+                    case 'diamond': return ['{', '}'];
+                    case 'circle': return ['((', '))'];
+                    case 'hexagon': return ['{{', '}}'];
+                    default: return ['[', ']'];
+                }
+            }
+            
+            parseCodeToVisual() {
+                try {
+                    const code = this.codeEditor.getValue();
+                    // Simple parser - in production use a proper Mermaid parser
+                    
+                    this.history.push('parseCode');
+                    
+                    // Clear current diagram
+                    this.state.update(s => {
+                        s.diagram.nodes.clear();
+                        s.diagram.connections.clear();
+                        s.selection.nodes.clear();
+                        s.selection.connections.clear();
+                    });
+                    
+                    // Parse nodes and connections
+                    const lines = code.split('\n');
+                    let y = 100;
+                    
+                    for (const line of lines) {
+                        if (line.trim().startsWith('graph')) continue;
+                        if (line.trim() === '') continue;
+                        
+                        // Simple node detection
+                        const nodeMatch = line.match(/(\w+)\[(.*?)\]/);
+                        if (nodeMatch) {
+                            const [, id, label] = nodeMatch;
+                            this.createNode({ x: 200, y }, { label, shape: 'rectangle' });
+                            y += 100;
+                        }
+                        
+                        // Simple connection detection
+                        const connMatch = line.match(/(\w+)\s*-->\s*(\w+)/);
+                        if (connMatch) {
+                            const [, source, target] = connMatch;
+                            const sourceNode = Array.from(this.state.getState().diagram.nodes.values())
+                                .find(n => n.data.label === source);
+                            const targetNode = Array.from(this.state.getState().diagram.nodes.values())
+                                .find(n => n.data.label === target);
+                            
+                            if (sourceNode && targetNode) {
+                                this.createConnection(sourceNode.id, targetNode.id);
+                            }
+                        }
+                    }
+                    
+                    this.showMessage('Diagram updated from code');
+                } catch (error) {
+                    this.showMessage('Error parsing Mermaid code', 'error');
+                    console.error(error);
+                }
+            }
+            
+            copy() {
+                const state = this.state.getState();
+                if (state.selection.nodes.size === 0) return;
+                
+                const clipboard = {
+                    nodes: [],
+                    connections: []
+                };
+                
+                // Copy selected nodes
+                for (const nodeId of state.selection.nodes) {
+                    const node = state.diagram.nodes.get(nodeId);
+                    if (node) {
+                        clipboard.nodes.push({
+                            id: node.id,
+                            data: { ...node.data }
+                        });
+                    }
+                }
+                
+                // Copy connections between selected nodes
+                for (const [connId, conn] of state.diagram.connections) {
+                    if (state.selection.nodes.has(conn.data.sourceId) && 
+                        state.selection.nodes.has(conn.data.targetId)) {
+                        clipboard.connections.push({
+                            id: conn.id,
+                            data: { ...conn.data }
+                        });
+                    }
+                }
+                
+                this.state.update(s => {
+                    s.clipboard = clipboard;
+                });
+                
+                this.showMessage('Copied to clipboard');
+            }
+            
+            paste() {
+                const state = this.state.getState();
+                if (!state.clipboard || state.clipboard.nodes.length === 0) return;
+                
+                this.history.push('paste');
+                
+                const idMap = new Map();
+                const offset = 50;
+                
+                // Clear selection
+                this.clearSelection();
+                
+                // Paste nodes
+                this.state.update(s => {
+                    for (const nodeData of s.clipboard.nodes) {
+                        const newId = 'node_' + Date.now() + '_' + Math.random();
+                        const newNode = new Node(newId, {
+                            ...nodeData.data,
+                            x: nodeData.data.x + offset,
+                            y: nodeData.data.y + offset
+                        });
+                        
+                        s.diagram.nodes.set(newId, newNode);
+                        s.selection.nodes.add(newId);
+                        idMap.set(nodeData.id, newId);
+                    }
+                    
+                    // Paste connections
+                    for (const connData of s.clipboard.connections) {
+                        const newSourceId = idMap.get(connData.data.sourceId);
+                        const newTargetId = idMap.get(connData.data.targetId);
+                        
+                        if (newSourceId && newTargetId) {
+                            const newId = 'connection_' + Date.now() + '_' + Math.random();
+                            const newConn = new Connection(newId, {
+                                ...connData.data,
+                                sourceId: newSourceId,
+                                targetId: newTargetId
+                            });
+                            
+                            s.diagram.connections.set(newId, newConn);
+                        }
+                    }
+                });
+                
+                this.showMessage('Pasted from clipboard');
+            }
+            
+            duplicate() {
+                this.copy();
+                this.paste();
+            }
+            
+            undo() {
+                if (this.history.undo()) {
+                    this.showMessage('Undo');
+                }
+            }
+            
+            redo() {
+                if (this.history.redo()) {
+                    this.showMessage('Redo');
+                }
+            }
+            
+            updateNodeProperty(property) {
+                const state = this.state.getState();
+                const nodeId = Array.from(state.selection.nodes)[0];
+                if (!nodeId) return;
+                
+                const value = document.getElementById('node' + property.charAt(0).toUpperCase() + property.slice(1)).value;
+                
+                this.history.push('updateProperty');
+                
+                this.state.update(s => {
+                    const node = s.diagram.nodes.get(nodeId);
+                    if (node) {
+                        if (property === 'width' || property === 'height') {
+                            node.data[property] = parseInt(value) || 100;
+                        } else {
+                            node.data[property] = value;
+                        }
+                    }
+                });
+            }
+            
+            updateConnectionProperty(property) {
+                const state = this.state.getState();
+                const connId = Array.from(state.selection.connections)[0];
+                if (!connId) return;
+                
+                const value = document.getElementById('connection' + property.charAt(0).toUpperCase() + property.slice(1)).value;
+                
+                this.history.push('updateProperty');
+                
+                this.state.update(s => {
+                    const conn = s.diagram.connections.get(connId);
+                    if (conn) {
+                        conn.data[property] = value;
+                    }
+                });
+            }
+            
+            updatePropertyPanel() {
+                const state = this.state.getState();
+                
+                // Hide all property panels
+                document.getElementById('nodeProperties').style.display = 'none';
+                document.getElementById('connectionProperties').style.display = 'none';
+                document.getElementById('defaultProperties').style.display = 'none';
+                
+                if (state.selection.nodes.size === 1) {
+                    // Show node properties
+                    const nodeId = Array.from(state.selection.nodes)[0];
+                    const node = state.diagram.nodes.get(nodeId);
+                    
+                    if (node) {
+                        document.getElementById('nodeProperties').style.display = 'block';
+                        document.getElementById('nodeLabel').value = node.data.label;
+                        document.getElementById('nodeShape').value = node.data.shape;
+                        document.getElementById('nodeWidth').value = node.data.width;
+                        document.getElementById('nodeHeight').value = node.data.height;
+                    }
+                } else if (state.selection.connections.size === 1) {
+                    // Show connection properties
+                    const connId = Array.from(state.selection.connections)[0];
+                    const conn = state.diagram.connections.get(connId);
+                    
+                    if (conn) {
+                        document.getElementById('connectionProperties').style.display = 'block';
+                        document.getElementById('connectionLabel').value = conn.data.label;
+                        document.getElementById('connectionStyle').value = conn.data.style;
+                    }
+                } else {
+                    // Show default properties
+                    document.getElementById('defaultProperties').style.display = 'block';
+                }
+            }
+            
+            updateStatusBar() {
+                const state = this.state.getState();
+                
+                // Update zoom
+                document.getElementById('statusZoom').textContent = Math.round(state.ui.zoom * 100) + '%';
+                
+                // Update object count
+                const nodeCount = state.diagram.nodes.size;
+                const connCount = state.diagram.connections.size;
+                document.getElementById('statusObjects').textContent = 
+                    `${nodeCount} node${nodeCount !== 1 ? 's' : ''}, ${connCount} connection${connCount !== 1 ? 's' : ''}`;
+            }
+            
+            showMessage(message, type = 'info') {
+                const statusMessage = document.getElementById('statusMessage');
+                statusMessage.textContent = message;
+                statusMessage.style.color = type === 'error' ? 'var(--error)' : 
+                                          type === 'warning' ? 'var(--warning)' : 
+                                          'var(--text-muted)';
+                
+                setTimeout(() => {
+                    statusMessage.textContent = 'Ready';
+                    statusMessage.style.color = 'var(--text-muted)';
+                }, 3000);
+            }
+            
+            contextAction(action) {
+                switch(action) {
+                    case 'copy':
+                        this.copy();
+                        break;
+                    case 'paste':
+                        this.paste();
+                        break;
+                    case 'duplicate':
+                        this.duplicate();
+                        break;
+                    case 'delete':
+                        this.deleteSelected();
+                        break;
+                    case 'bringToFront':
+                        // TODO: Implement z-index management
+                        this.showMessage('Bring to front not yet implemented');
+                        break;
+                    case 'sendToBack':
+                        // TODO: Implement z-index management
+                        this.showMessage('Send to back not yet implemented');
+                        break;
+                    case 'createCanvas':
+                        this.createInnerCanvas();
+                        break;
+                }
+            }
+            
+            createInnerCanvas() {
+                const state = this.state.getState();
+                const nodeId = Array.from(state.selection.nodes)[0];
+                if (!nodeId) return;
+                
+                this.history.push('createCanvas');
+                
+                this.state.update(s => {
+                    const node = s.diagram.nodes.get(nodeId);
+                    if (node) {
+                        node.data.hasCanvas = true;
+                        node.data.innerCanvas = {
+                            nodes: new Map(),
+                            connections: new Map()
+                        };
+                    }
+                });
+                
+                this.showMessage('Inner canvas created');
+            }
+            
+            showNodeCreationMenu(point) {
+                const menu = document.getElementById('contextMenu');
+                menu.innerHTML = `
+                    <div class="context-menu-item" onclick="editor.createNodeFromMenu(${point.x}, ${point.y}, 'rectangle')">
+                        <span>□</span> Rectangle
+                    </div>
+                    <div class="context-menu-item" onclick="editor.createNodeFromMenu(${point.x}, ${point.y}, 'roundedRect')">
+                        <span>▢</span> Rounded Rectangle
+                    </div>
+                    <div class="context-menu-item" onclick="editor.createNodeFromMenu(${point.x}, ${point.y}, 'diamond')">
+                        <span>◇</span> Diamond
+                    </div>
+                    <div class="context-menu-item" onclick="editor.createNodeFromMenu(${point.x}, ${point.y}, 'circle')">
+                        <span>○</span> Circle
+                    </div>
+                    <div class="context-menu-item" onclick="editor.createNodeFromMenu(${point.x}, ${point.y}, 'hexagon')">
+                        <span>⬡</span> Hexagon
+                    </div>
+                `;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                menu.style.left = (point.x * this.state.getState().ui.zoom + this.state.getState().ui.pan.x + rect.left) + 'px';
+                menu.style.top = (point.y * this.state.getState().ui.zoom + this.state.getState().ui.pan.y + rect.top) + 'px';
+                menu.classList.add('visible');
+            }
+            
+            createNodeFromMenu(x, y, shape) {
+                this.createNode({ x, y }, { shape, label: 'New Node' });
+                document.getElementById('contextMenu').classList.remove('visible');
+            }
+            
+            loadTemplate(templateName) {
+                const templates = {
+                    flowchart: {
+                        nodes: [
+                            { id: 'start', x: 200, y: 100, label: 'Start', shape: 'roundedRect' },
+                            { id: 'process', x: 200, y: 200, label: 'Process', shape: 'rectangle' },
+                            { id: 'decision', x: 200, y: 300, label: 'Decision?', shape: 'diamond' },
+                            { id: 'yes', x: 100, y: 400, label: 'Yes', shape: 'rectangle' },
+                            { id: 'no', x: 300, y: 400, label: 'No', shape: 'rectangle' },
+                            { id: 'end', x: 200, y: 500, label: 'End', shape: 'roundedRect' }
+                        ],
+                        connections: [
+                            { source: 'start', target: 'process' },
+                            { source: 'process', target: 'decision' },
+                            { source: 'decision', target: 'yes', label: 'Yes' },
+                            { source: 'decision', target: 'no', label: 'No' },
+                            { source: 'yes', target: 'end' },
+                            { source: 'no', target: 'end' }
+                        ]
+                    },
+                    sequence: {
+                        nodes: [
+                            { id: 'user', x: 100, y: 100, label: 'User', shape: 'rectangle' },
+                            { id: 'system', x: 300, y: 100, label: 'System', shape: 'rectangle' },
+                            { id: 'database', x: 500, y: 100, label: 'Database', shape: 'rectangle' }
+                        ],
+                        connections: [
+                            { source: 'user', target: 'system', label: 'Request' },
+                            { source: 'system', target: 'database', label: 'Query' },
+                            { source: 'database', target: 'system', label: 'Result' },
+                            { source: 'system', target: 'user', label: 'Response' }
+                        ]
+                    },
+                    stateDiagram: {
+                        nodes: [
+                            { id: 'idle', x: 200, y: 100, label: 'Idle', shape: 'roundedRect' },
+                            { id: 'loading', x: 200, y: 200, label: 'Loading', shape: 'roundedRect' },
+                            { id: 'success', x: 100, y: 300, label: 'Success', shape: 'roundedRect' },
+                            { id: 'error', x: 300, y: 300, label: 'Error', shape: 'roundedRect' }
+                        ],
+                        connections: [
+                            { source: 'idle', target: 'loading', label: 'Start' },
+                            { source: 'loading', target: 'success', label: 'Complete' },
+                            { source: 'loading', target: 'error', label: 'Fail' },
+                            { source: 'success', target: 'idle', label: 'Reset' },
+                            { source: 'error', target: 'idle', label: 'Retry' }
+                        ]
+                    }
+                };
+                
+                const template = templates[templateName];
+                if (!template) return;
+                
+                this.history.push('loadTemplate');
+                
+                // Clear current diagram
+                this.state.update(s => {
+                    s.diagram.nodes.clear();
+                    s.diagram.connections.clear();
+                    s.selection.nodes.clear();
+                    s.selection.connections.clear();
+                });
+                
+                // Create nodes
+                const nodeMap = new Map();
+                template.nodes.forEach(nodeData => {
+                    const id = 'node_' + Date.now() + '_' + nodeData.id;
+                    const node = new Node(id, nodeData);
+                    nodeMap.set(nodeData.id, id);
+                    
+                    this.state.update(s => {
+                        s.diagram.nodes.set(id, node);
+                    });
+                });
+                
+                // Create connections
+                template.connections.forEach(connData => {
+                    const sourceId = nodeMap.get(connData.source);
+                    const targetId = nodeMap.get(connData.target);
+                    
+                    if (sourceId && targetId) {
+                        this.createConnection(sourceId, targetId);
+                        
+                        // Add label if present
+                        if (connData.label) {
+                            const connId = Array.from(this.state.getState().diagram.connections.keys()).pop();
+                            this.state.update(s => {
+                                const conn = s.diagram.connections.get(connId);
+                                if (conn) {
+                                    conn.data.label = connData.label;
+                                }
+                            });
+                        }
+                    }
+                });
+                
+                this.fitToScreen();
+                this.showMessage(`Loaded ${templateName} template`);
+            }
+            
+            render() {
+                const state = this.state.getState();
+                
+                // Update viewport transform
+                this.viewport.setAttribute('transform', 
+                    `translate(${state.ui.pan.x}, ${state.ui.pan.y}) scale(${state.ui.zoom})`);
+                
+                // Clear and render connections
+                this.connectionsGroup.innerHTML = '';
+                for (const [id, connection] of state.diagram.connections) {
+                    const element = connection.render(this.canvas, state.diagram.nodes, 
+                        state.selection.connections.has(id));
+                    if (element) {
+                        this.connectionsGroup.appendChild(element);
+                    }
+                }
+                
+                // Clear and render nodes
+                this.nodesGroup.innerHTML = '';
+                for (const [id, node] of state.diagram.nodes) {
+                    const element = node.render(this.canvas, state.selection.nodes.has(id));
+                    this.nodesGroup.appendChild(element);
+                }
+            }
+            
+            saveDiagram() {
+                const state = this.state.getState();
+                const data = {
+                    diagram: {
+                        nodes: Array.from(state.diagram.nodes.entries()).map(([id, node]) => ({
+                            id,
+                            data: node.data
+                        })),
+                        connections: Array.from(state.diagram.connections.entries()).map(([id, conn]) => ({
+                            id,
+                            data: conn.data
+                        }))
+                    },
+                    ui: state.ui
+                };
+                
+                localStorage.setItem('mermaidEditorDiagram', JSON.stringify(data));
+                this.showMessage('Diagram saved');
+            }
+            
+            loadFromStorage() {
+                const saved = localStorage.getItem('mermaidEditorDiagram');
+                if (!saved) return;
+                
+                try {
+                    const data = JSON.parse(saved);
+                    
+                    this.state.update(s => {
+                        // Load nodes
+                        s.diagram.nodes.clear();
+                        data.diagram.nodes.forEach(nodeData => {
+                            const node = new Node(nodeData.id, nodeData.data);
+                            s.diagram.nodes.set(nodeData.id, node);
+                        });
+                        
+                        // Load connections
+                        s.diagram.connections.clear();
+                        data.diagram.connections.forEach(connData => {
+                            const conn = new Connection(connData.id, connData.data);
+                            s.diagram.connections.set(connData.id, conn);
+                        });
+                        
+                        // Load UI state
+                        Object.assign(s.ui, data.ui);
+                    });
+                    
+                    this.showMessage('Diagram loaded from storage');
+                } catch (error) {
+                    console.error('Error loading diagram:', error);
+                }
+            }
+            
+            newDiagram() {
+                if (confirm('Create new diagram? Unsaved changes will be lost.')) {
+                    this.state.update(s => {
+                        s.diagram.nodes.clear();
+                        s.diagram.connections.clear();
+                        s.selection.nodes.clear();
+                        s.selection.connections.clear();
+                        s.ui.zoom = 1;
+                        s.ui.pan = { x: 0, y: 0 };
+                    });
+                    
+                    this.history.past = [];
+                    this.history.future = [];
+                    
+                    this.showMessage('New diagram created');
+                }
+            }
+            
+            loadDiagram() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json,.mmd';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            // Load diagram data (same as loadFromStorage)
+                            this.showMessage('Diagram loaded from file');
+                        } catch (error) {
+                            this.showMessage('Error loading file', 'error');
+                        }
+                    };
+                    
+                    reader.readAsText(file);
+                };
+                
+                input.click();
+            }
+            
+            exportDiagram() {
+                const state = this.state.getState();
+                const data = {
+                    diagram: {
+                        nodes: Array.from(state.diagram.nodes.entries()).map(([id, node]) => ({
+                            id,
+                            data: node.data
+                        })),
+                        connections: Array.from(state.diagram.connections.entries()).map(([id, conn]) => ({
+                            id,
+                            data: conn.data
+                        }))
+                    },
+                    mermaidCode: this.generateMermaidCode()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'diagram.json';
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                this.showMessage('Diagram exported');
+            }
+            
+            handleResize() {
+                // Update canvas size if needed
+                this.render();
+            }
+        }
+
+        // Initialize editor
+        window.editor = new MermaidEditor();
+        
+        // Initialize mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#2D3748',
+                primaryTextColor: '#F7FAFC',
+                primaryBorderColor: '#B794F4',
+                lineColor: '#FBB6CE',
+                secondaryColor: '#90CDF4',
+                tertiaryColor: '#9AE6B4',
+                background: '#1A202C',
+                mainBkg: '#2D3748',
+                fontSize: '16px'
+            }
+        });
+    </script>
+</body>
+</html>

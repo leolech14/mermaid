@@ -76,22 +76,26 @@ graph TD
 
 ## 🏗️ Architecture
 
-### Rendering Strategy
-- **Primary**: Canvas 2D for complex diagrams (>100 nodes)
-- **Fallback**: SVG for simple diagrams and better accessibility
-- **Progressive**: Automatic switching based on complexity
+### Current Implementation
+The editor has two parallel implementations:
+1. **Monolithic Version** (`views/editor-interactive.html`) - Legacy 3,600+ line file
+2. **Modular Version** (`views/editor-modular.html`) - Modern architecture with separated modules
 
-### State Management
-- MobX for reactive updates
-- Command pattern for undo/redo
-- Local storage for persistence
-- WebSocket ready for collaboration
+### Module System
+- ES6 modules bundled for browser compatibility
+- Event-driven communication between components
+- Manager pattern for nodes, connections, and state
+- Adapter pattern for legacy code compatibility
 
-### Performance
-- Virtual viewport for large diagrams
-- Debounced rendering
-- Web Workers for heavy computation
-- Lazy loading of features
+### 📚 Documentation for Developers
+- **[EDITING_MANUAL.md](EDITING_MANUAL.md)** - Comprehensive guide for making changes
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick lookup for common tasks
+- **[js/README.md](js/README.md)** - JavaScript architecture details
+
+### Build System
+- Source files in ES6 modules
+- Build scripts create browser-compatible bundles
+- CSS follows modular architecture with component separation
 
 ## 📦 Project Structure
 
