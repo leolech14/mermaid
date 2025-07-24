@@ -34,6 +34,7 @@ This repository contains a modular Mermaid diagram editor with multiple implemen
 - [`BESTPRACTICES.md`](BESTPRACTICES.md) - **MUST READ** - Development standards and guidelines
 - [`edit_log.md`](edit_log.md) - Track all code changes
 - [`todo_list.md`](todo_list.md) - Current and planned tasks
+- [`ai-assessment-guide.md`](ai-assessment-guide.md) - Guide for AI-powered code assessment
 
 ## Project Structure
 
