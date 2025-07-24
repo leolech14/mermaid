@@ -1,0 +1,96 @@
+name: AI Code Assessment
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+    inputs:
+      assessment_type:
+        description: 'Type of assessment'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - security
+          - performance
+          - quality
+
+jobs:
+  ai-assessment:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run ESLint
+      run: npx eslint . --format json --output-file eslint-report.json || true
+      
+    - name: Code Quality Metrics
+      run: |
+        echo "## Code Quality Report" >> $GITHUB_STEP_SUMMARY
+        echo "- Total Files: $(find . -name "*.js" -o -name "*.html" -o -name "*.css" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- JavaScript Files: $(find . -name "*.js" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Total Lines: $(find . -name "*.js" -o -name "*.html" -o -name "*.css" -exec wc -l {} + | tail -1 | awk '{print $1}')" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Security Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Security Results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: AI Assessment Comment
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read ESLint results if available
+          let eslintIssues = 0;
+          try {
+            const eslintReport = JSON.parse(fs.readFileSync('eslint-report.json', 'utf8'));
+            eslintIssues = eslintReport.reduce((acc, file) => acc + file.messages.length, 0);
+          } catch (e) {}
+          
+          const comment = `## 🤖 AI Code Assessment Report
+          
+          ### 📊 Code Quality
+          - ESLint Issues Found: ${eslintIssues}
+          - Security Scan: ✅ Completed (see Security tab)
+          
+          ### 🎯 Recommendations
+          1. Review ESLint issues in Files Changed tab
+          2. Check Security alerts for vulnerabilities
+          3. Run \`npm run ai:assess-quality\` locally for detailed analysis
+          
+          ### 📚 Resources
+          - [AI Assessment Guide](../blob/main/ai-assessment-guide.md)
+          - [Best Practices](../blob/main/BESTPRACTICES.md)
+          - [Architecture Guide](../blob/main/ARCHITECTURE.md)
+          
+          ---
+          *This assessment was automatically generated. For custom analysis, see ai-assessment-guide.md*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

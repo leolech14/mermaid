@@ -46,7 +46,7 @@
     }
   },
 
-  "postCreateCommand": "npm install",
+  "postCreateCommand": ".devcontainer/postCreateCommand.sh",
   "postStartCommand": "echo '🚀 Mermaid Editor Development Environment Ready!'",
 
   "forwardPorts": [5173, 3000, 8080],
