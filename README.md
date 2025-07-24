@@ -1,165 +1,61 @@
-# Mermaid Visual Editor - Hybrid Excellence Approach
+# Mermaid Editor
 
-A powerful yet intuitive Mermaid diagram editor that combines the best of code and visual editing paradigms. Built with a balanced architecture that scales from simple to complex use cases.
+A powerful, interactive web-based editor for creating and editing Mermaid diagrams with real-time preview, syntax highlighting, and extensive customization options.
 
-## 🎯 Features
+## Overview
 
-### Core Capabilities
-- **Dual-Mode Editing**: Seamless switching between code and visual modes
-- **Smart Rendering**: Canvas 2D for performance with SVG fallback
-- **Progressive Enhancement**: Works everywhere, scales with capability
-- **Real-time Sync**: Live preview as you type or drag
-- **Touch Support**: First-class mobile and tablet experience
+This repository contains a modular Mermaid diagram editor with multiple implementations optimized for different use cases:
 
-### Visual Editing
-- Drag and drop nodes
-- Visual connection drawing
-- Auto-layout algorithms
-- Grid snapping
-- Multi-selection
+- **Full-featured editor** with all capabilities
+- **Minimal editor** for lightweight embedding
+- **Modular architecture** for easy customization
 
-### Code Editing
-- Syntax highlighting
-- Auto-completion
-- Error detection
-- Format on save
-- Template library
+## Quick Start
 
-### Export Options
-- SVG (vector)
-- PNG (raster)
-- PDF (print)
-- Markdown (documentation)
-- HTML (embed)
+1. **Main Editor**: Open `mermaid.html` in a web browser
+2. **Minimal Version**: Use `minimal-editor.html` for a lightweight experience
+3. **Development**: See `SETUP.md` for development environment setup
 
-## 🚀 Quick Start
+## Key Features
 
-### Using as a Module
+- Real-time diagram preview
+- Syntax highlighting with CodeMirror
+- Multiple theme support (Dark/Light)
+- Export to PNG/SVG
+- Auto-save functionality
+- Responsive design
+- Modular architecture
 
-```javascript
-// Import the module
-import MermaidEditor from './src/core/editor.js';
+## Documentation
 
-// Initialize in your container
-const editor = new MermaidEditor('editor-container', {
-    theme: 'dark',
-    enableVisualEdit: true,
-    enableCodeEdit: true
-});
+- [`FEATURES.md`](FEATURES.md) - Complete feature documentation and roadmap
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) - Technical architecture and design decisions
+- [`SETUP.md`](SETUP.md) - Development setup and build instructions
+- [`BESTPRACTICES.md`](BESTPRACTICES.md) - **MUST READ** - Development standards and guidelines
+- [`edit_log.md`](edit_log.md) - Track all code changes
+- [`todo_list.md`](todo_list.md) - Current and planned tasks
 
-// Load a diagram
-editor.setCode(`
-graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Process]
-    B -->|No| D[End]
-`);
-```
-
-### Standalone Usage
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" href="dist/mermaid-editor.css">
-</head>
-<body>
-    <div id="editor"></div>
-    <script src="dist/mermaid-editor.js"></script>
-    <script>
-        const editor = new MermaidEditor('editor');
-    </script>
-</body>
-</html>
-```
-
-## 🏗️ Architecture
-
-### Current Implementation
-The editor has two parallel implementations:
-1. **Monolithic Version** (`views/editor-interactive.html`) - Legacy 3,600+ line file
-2. **Modular Version** (`views/editor-modular.html`) - Modern architecture with separated modules
-
-### Module System
-- ES6 modules bundled for browser compatibility
-- Event-driven communication between components
-- Manager pattern for nodes, connections, and state
-- Adapter pattern for legacy code compatibility
-
-### 📚 Documentation for Developers
-- **[EDITING_MANUAL.md](EDITING_MANUAL.md)** - Comprehensive guide for making changes
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick lookup for common tasks
-- **[js/README.md](js/README.md)** - JavaScript architecture details
-
-### Build System
-- Source files in ES6 modules
-- Build scripts create browser-compatible bundles
-- CSS follows modular architecture with component separation
-
-## 📦 Project Structure
+## Project Structure
 
 ```
-mermaid-editor/
-├── src/
-│   ├── core/           # Core editor logic
-│   ├── renderer/       # Canvas/SVG rendering
-│   ├── ui/            # UI components
-│   ├── state/         # State management
-│   └── utils/         # Utilities
-├── dist/              # Built files
-├── examples/          # Usage examples
-├── docs/              # Documentation
-└── tests/             # Test suite
+mermaid/
+├── index.html              # Landing page
+├── mermaid.html           # Main full-featured editor
+├── minimal-editor.html    # Lightweight editor version
+├── src/                   # ES6 source modules
+├── js/                    # JavaScript modules and bundles
+├── css/                   # Modular CSS files
+├── views/                 # Alternative editor implementations
+└── versions/              # Historical versions archive
 ```
 
-## 🛠️ Development
+## Browser Compatibility
 
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-```
-
-## 📊 Browser Support
-
-- Chrome/Edge 90+
-- Firefox 88+
+- Chrome/Edge 88+
+- Firefox 85+
 - Safari 14+
-- Mobile browsers (iOS 14+, Android 10+)
+- Requires JavaScript enabled
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 🎯 Roadmap
-
-### Phase 1 (Current)
-- [x] Core dual-mode editor
-- [x] Basic visual editing
-- [x] Export functionality
-- [ ] Touch support
-
-### Phase 2
-- [ ] Advanced layouts
-- [ ] Collaboration features
-- [ ] Plugin system
-- [ ] AI assistance
-
-### Phase 3
-- [ ] Mobile apps
-- [ ] Cloud sync
-- [ ] Enterprise features
-- [ ] Advanced analytics
+MIT License - See LICENSE file for details
