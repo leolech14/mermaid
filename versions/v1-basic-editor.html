@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Mermaid Editor - Interactive Diagram Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0F1419;
+            --bg-secondary: #1A202C;
+            --bg-tertiary: #2D3748;
+            --bg-hover: #4A5568;
+            --text-primary: #F7FAFC;
+            --text-secondary: #E2E8F0;
+            --text-muted: #A0AEC0;
+            --accent-purple: #B794F4;
+            --accent-pink: #FBB6CE;
+            --accent-blue: #90CDF4;
+            --accent-green: #9AE6B4;
+            --accent-yellow: #F6E05E;
+            --accent-orange: #F6AD55;
+            --border-color: #2D3748;
+            --success: #68D391;
+            --error: #FC8181;
+            --warning: #F6AD55;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 60px 1fr 40px;
+            height: 100vh;
+            gap: 1px;
+            background-color: var(--border-color);
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background-color: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-purple);
+            margin-right: auto;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background-color: var(--bg-secondary);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Editor */
+        .editor-container {
+            background-color: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-tabs {
+            display: flex;
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-hover);
+        }
+
+        .tab.active {
+            color: var(--text-primary);
+            background-color: var(--bg-secondary);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--accent-purple);
+        }
+
+        .editor-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        #codeEditor {
+            flex: 1;
+            padding: 20px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: none;
+            outline: none;
+            resize: none;
+            overflow-y: auto;
+        }
+
+        #preview {
+            flex: 1;
+            padding: 20px;
+            background-color: var(--bg-primary);
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mermaid {
+            background-color: var(--bg-secondary);
+            border: 3px solid var(--bg-tertiary);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        /* Properties Panel */
+        .properties-panel {
+            background-color: var(--bg-secondary);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            grid-column: 1 / -1;
+            background-color: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-purple);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-pink);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(183, 148, 244, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--accent-purple);
+        }
+
+        /* Diagram Templates */
+        .template-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .template-item {
+            padding: 12px;
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .template-item:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--accent-purple);
+            transform: translateX(4px);
+        }
+
+        .template-item h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .template-item p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(183, 148, 244, 0.2);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Split View */
+        .split-view {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background-color: var(--border-color);
+            height: 100%;
+        }
+
+        .split-view.active {
+            display: grid;
+        }
+
+        /* Error Display */
+        .error-message {
+            background-color: rgba(252, 129, 129, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 12px;
+            border-radius: 6px;
+            margin: 20px;
+            font-size: 0.875rem;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--bg-tertiary);
+            border-radius: 50%;
+            border-top-color: var(--accent-purple);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 60px 1fr 40px;
+            }
+            
+            .sidebar, .properties-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎨 Mermaid Editor</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="toggleTheme()">
+                    <span id="themeIcon">🌙</span> Theme
+                </button>
+                <button class="btn btn-secondary" onclick="exportDiagram()">
+                    <span>📥</span> Export
+                </button>
+                <button class="btn btn-primary" onclick="saveDiagram()">
+                    <span>💾</span> Save
+                </button>
+            </div>
+        </header>
+
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <h2>Templates</h2>
+            <div class="template-grid">
+                <div class="template-item" onclick="loadTemplate('flowchart')">
+                    <h3>Flowchart</h3>
+                    <p>Basic flow diagram</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('sequence')">
+                    <h3>Sequence</h3>
+                    <p>Interaction diagram</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('gantt')">
+                    <h3>Gantt Chart</h3>
+                    <p>Project timeline</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('class')">
+                    <h3>Class Diagram</h3>
+                    <p>OOP structure</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('state')">
+                    <h3>State Diagram</h3>
+                    <p>State machine</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('er')">
+                    <h3>ER Diagram</h3>
+                    <p>Database schema</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('journey')">
+                    <h3>User Journey</h3>
+                    <p>User experience</p>
+                </div>
+                <div class="template-item" onclick="loadTemplate('pie')">
+                    <h3>Pie Chart</h3>
+                    <p>Data visualization</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Editor -->
+        <main class="editor-container">
+            <div class="editor-tabs">
+                <button class="tab active" onclick="switchView('code')">Code</button>
+                <button class="tab" onclick="switchView('preview')">Preview</button>
+                <button class="tab" onclick="switchView('split')">Split View</button>
+            </div>
+            <div class="editor-content">
+                <div id="codeView">
+                    <textarea id="codeEditor" spellcheck="false" placeholder="Enter your Mermaid diagram code here...">graph TD
+    A[Start] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]
+    D --> G[End]
+    E --> G
+    F --> G</textarea>
+                </div>
+                <div id="previewView" style="display: none;">
+                    <div id="preview"></div>
+                </div>
+                <div id="splitView" class="split-view">
+                    <textarea id="splitCodeEditor" spellcheck="false"></textarea>
+                    <div id="splitPreview"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Properties Panel -->
+        <aside class="properties-panel">
+            <h2>Diagram Properties</h2>
+            
+            <div class="form-group">
+                <label for="diagramTheme">Diagram Theme</label>
+                <select id="diagramTheme" class="form-control" onchange="updateDiagramTheme()">
+                    <option value="dark">Dark (Pastel)</option>
+                    <option value="default">Default</option>
+                    <option value="forest">Forest</option>
+                    <option value="neutral">Neutral</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="diagramDirection">Flow Direction</label>
+                <select id="diagramDirection" class="form-control" onchange="updateDiagramDirection()">
+                    <option value="TD">Top Down</option>
+                    <option value="LR">Left to Right</option>
+                    <option value="BT">Bottom Top</option>
+                    <option value="RL">Right to Left</option>
+                </select>
+            </div>
+
+            <h2 style="margin-top: 30px;">Export Options</h2>
+            
+            <div class="form-group">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="exportAs('svg')">
+                    Export as SVG
+                </button>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="exportAs('png')">
+                    Export as PNG
+                </button>
+            </div>
+            <div class="form-group">
+                <button class="btn btn-secondary" style="width: 100%;" onclick="exportAs('markdown')">
+                    Copy as Markdown
+                </button>
+            </div>
+        </aside>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <span id="status">Ready</span>
+            <span style="margin-left: auto;">Characters: <span id="charCount">0</span></span>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Mermaid with dark theme and pastel colors
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#2D3748',
+                primaryTextColor: '#F7FAFC',
+                primaryBorderColor: '#B794F4',
+                lineColor: '#FBB6CE',
+                secondaryColor: '#90CDF4',
+                tertiaryColor: '#9AE6B4',
+                background: '#1A202C',
+                mainBkg: '#2D3748',
+                secondBkg: '#4A5568',
+                tertiaryBkg: '#718096',
+                primaryBoxBkg: '#2D3748',
+                primaryBoxBorder: '#B794F4',
+                nodeBkg: '#2D3748',
+                nodeTextColor: '#F7FAFC',
+                fontSize: '16px',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                edgeLabelBackground: '#1A202C',
+                actorBkg: '#2D3748',
+                actorBorder: '#B794F4',
+                actorTextColor: '#F7FAFC',
+                activationBorderColor: '#FBB6CE',
+                activationBkgColor: '#2D3748',
+                sequenceNumberColor: '#F7FAFC',
+                noteBkgColor: '#4A5568',
+                noteTextColor: '#F7FAFC',
+                noteBorderColor: '#B794F4',
+                sectionBkgColor: '#2D3748',
+                altSectionBkgColor: '#1A202C',
+                taskBorderColor: '#B794F4',
+                taskBkgColor: '#2D3748',
+                taskTextColor: '#F7FAFC',
+                activeTaskBorderColor: '#FBB6CE',
+                activeTaskBkgColor: '#4A5568',
+                gridColor: '#4A5568',
+                doneTaskBkgColor: '#9AE6B4',
+                doneTaskBorderColor: '#68D391',
+                critBorderColor: '#FC8181',
+                critBkgColor: '#FC8181',
+                todayLineColor: '#F6AD55'
+            }
+        });
+
+        // Templates
+        const templates = {
+            flowchart: `graph TD
+    A[Start] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]
+    D --> G[End]
+    E --> G
+    F --> G`,
+            
+            sequence: `sequenceDiagram
+    participant User
+    participant Browser
+    participant Server
+    participant Database
+    
+    User->>Browser: Enter URL
+    Browser->>Server: HTTP Request
+    Server->>Database: Query data
+    Database-->>Server: Return results
+    Server-->>Browser: HTTP Response
+    Browser-->>User: Display page`,
+            
+            gantt: `gantt
+    title Project Schedule
+    dateFormat YYYY-MM-DD
+    section Planning
+    Requirements :done, des1, 2024-01-01, 2024-01-07
+    Design       :active, des2, 2024-01-08, 10d
+    section Development
+    Backend      :des3, after des2, 20d
+    Frontend     :des4, after des2, 25d
+    section Testing
+    Unit Tests   :des5, after des3, 5d
+    Integration  :des6, after des4, 5d`,
+            
+            class: `classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+    class Dog {
+        +String breed
+        +bark()
+    }
+    class Cat {
+        +String color
+        +meow()
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat`,
+            
+            state: `stateDiagram-v2
+    [*] --> Idle
+    Idle --> Processing : Start
+    Processing --> Success : Complete
+    Processing --> Error : Fail
+    Success --> [*]
+    Error --> Idle : Retry
+    Error --> [*] : Abort`,
+            
+            er: `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    PRODUCT ||--o{ LINE-ITEM : includes
+    CUSTOMER {
+        string name
+        string address
+        string phone
+    }
+    ORDER {
+        int orderNumber
+        date orderDate
+    }
+    LINE-ITEM {
+        int quantity
+        float price
+    }
+    PRODUCT {
+        string name
+        float price
+    }`,
+            
+            journey: `journey
+    title User Shopping Journey
+    section Browse
+      Visit Homepage: 5: User
+      Search Products: 4: User
+      View Product: 5: User
+    section Purchase
+      Add to Cart: 5: User
+      Checkout: 3: User
+      Payment: 2: User
+    section Post-Purchase
+      Receive Email: 5: User
+      Track Order: 4: User
+      Receive Product: 5: User`,
+            
+            pie: `pie title Project Time Allocation
+    "Development" : 45
+    "Testing" : 20
+    "Documentation" : 15
+    "Meetings" : 10
+    "Bug Fixes" : 10`
+        };
+
+        // Global variables
+        let currentView = 'code';
+        let isDarkTheme = true;
+        let renderTimeout;
+
+        // Get elements
+        const codeEditor = document.getElementById('codeEditor');
+        const preview = document.getElementById('preview');
+        const splitCodeEditor = document.getElementById('splitCodeEditor');
+        const splitPreview = document.getElementById('splitPreview');
+        const charCount = document.getElementById('charCount');
+        const status = document.getElementById('status');
+
+        // Initialize
+        updateCharCount();
+        renderDiagram();
+
+        // Event listeners
+        codeEditor.addEventListener('input', debounce(handleCodeChange, 500));
+        splitCodeEditor.addEventListener('input', debounce(handleSplitCodeChange, 500));
+
+        // Functions
+        function handleCodeChange() {
+            updateCharCount();
+            renderDiagram();
+            if (currentView === 'split') {
+                splitCodeEditor.value = codeEditor.value;
+            }
+        }
+
+        function handleSplitCodeChange() {
+            codeEditor.value = splitCodeEditor.value;
+            updateCharCount();
+            renderDiagram();
+        }
+
+        function updateCharCount() {
+            charCount.textContent = codeEditor.value.length;
+        }
+
+        function renderDiagram() {
+            const code = codeEditor.value.trim();
+            if (!code) {
+                preview.innerHTML = '<div class="error-message">Enter Mermaid code to see preview</div>';
+                splitPreview.innerHTML = preview.innerHTML;
+                return;
+            }
+
+            try {
+                const uniqueId = 'mermaid-' + Date.now();
+                const mermaidDiv = `<div class="mermaid" id="${uniqueId}">${code}</div>`;
+                
+                if (currentView === 'preview' || currentView === 'code') {
+                    preview.innerHTML = mermaidDiv;
+                }
+                if (currentView === 'split') {
+                    splitPreview.innerHTML = mermaidDiv;
+                }
+                
+                mermaid.run();
+                updateStatus('Diagram rendered successfully', 'success');
+            } catch (error) {
+                const errorMsg = `<div class="error-message">Error: ${error.message}</div>`;
+                preview.innerHTML = errorMsg;
+                splitPreview.innerHTML = errorMsg;
+                updateStatus('Error rendering diagram', 'error');
+            }
+        }
+
+        function switchView(view) {
+            currentView = view;
+            
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update views
+            document.getElementById('codeView').style.display = view === 'code' ? 'block' : 'none';
+            document.getElementById('previewView').style.display = view === 'preview' ? 'block' : 'none';
+            document.getElementById('splitView').classList.toggle('active', view === 'split');
+            
+            if (view === 'split') {
+                splitCodeEditor.value = codeEditor.value;
+                renderDiagram();
+            } else if (view === 'preview') {
+                renderDiagram();
+            }
+        }
+
+        function loadTemplate(templateName) {
+            if (templates[templateName]) {
+                codeEditor.value = templates[templateName];
+                if (currentView === 'split') {
+                    splitCodeEditor.value = templates[templateName];
+                }
+                updateCharCount();
+                renderDiagram();
+                updateStatus(`Loaded ${templateName} template`, 'success');
+            }
+        }
+
+        function updateDiagramTheme() {
+            const theme = document.getElementById('diagramTheme').value;
+            mermaid.initialize({ 
+                theme: theme,
+                themeVariables: theme === 'dark' ? {
+                    primaryColor: '#2D3748',
+                    primaryTextColor: '#F7FAFC',
+                    primaryBorderColor: '#B794F4',
+                    lineColor: '#FBB6CE',
+                    secondaryColor: '#90CDF4',
+                    tertiaryColor: '#9AE6B4',
+                    background: '#1A202C',
+                    mainBkg: '#2D3748',
+                    secondBkg: '#4A5568',
+                    tertiaryBkg: '#718096'
+                } : {}
+            });
+            renderDiagram();
+        }
+
+        function updateDiagramDirection() {
+            const direction = document.getElementById('diagramDirection').value;
+            const code = codeEditor.value;
+            const updatedCode = code.replace(/graph\s+\w+/, `graph ${direction}`);
+            codeEditor.value = updatedCode;
+            if (currentView === 'split') {
+                splitCodeEditor.value = updatedCode;
+            }
+            renderDiagram();
+        }
+
+        function exportDiagram() {
+            exportAs('svg');
+        }
+
+        function exportAs(format) {
+            const svg = document.querySelector('.mermaid svg');
+            if (!svg) {
+                updateStatus('No diagram to export', 'error');
+                return;
+            }
+
+            switch(format) {
+                case 'svg':
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                    const svgUrl = URL.createObjectURL(svgBlob);
+                    downloadFile(svgUrl, 'diagram.svg');
+                    break;
+                    
+                case 'png':
+                    svgToPng(svg);
+                    break;
+                    
+                case 'markdown':
+                    const markdownCode = '```mermaid\n' + codeEditor.value + '\n```';
+                    navigator.clipboard.writeText(markdownCode);
+                    updateStatus('Copied to clipboard as Markdown', 'success');
+                    break;
+            }
+        }
+
+        function svgToPng(svg) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.fillStyle = '#1A202C';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    downloadFile(url, 'diagram.png');
+                });
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        function downloadFile(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            updateStatus(`Exported as ${filename}`, 'success');
+        }
+
+        function saveDiagram() {
+            const diagramData = {
+                code: codeEditor.value,
+                timestamp: new Date().toISOString(),
+                theme: document.getElementById('diagramTheme').value
+            };
+            
+            localStorage.setItem('mermaidDiagram', JSON.stringify(diagramData));
+            updateStatus('Diagram saved locally', 'success');
+        }
+
+        function loadSavedDiagram() {
+            const saved = localStorage.getItem('mermaidDiagram');
+            if (saved) {
+                const data = JSON.parse(saved);
+                codeEditor.value = data.code;
+                document.getElementById('diagramTheme').value = data.theme || 'dark';
+                updateCharCount();
+                renderDiagram();
+                updateStatus('Loaded saved diagram', 'success');
+            }
+        }
+
+        function toggleTheme() {
+            isDarkTheme = !isDarkTheme;
+            document.getElementById('themeIcon').textContent = isDarkTheme ? '🌙' : '☀️';
+            // In a real implementation, you would toggle CSS variables here
+            updateStatus(`Switched to ${isDarkTheme ? 'dark' : 'light'} theme`, 'success');
+        }
+
+        function updateStatus(message, type = 'info') {
+            status.textContent = message;
+            status.style.color = type === 'error' ? 'var(--error)' : 
+                               type === 'success' ? 'var(--success)' : 
+                               'var(--text-muted)';
+            
+            setTimeout(() => {
+                status.textContent = 'Ready';
+                status.style.color = 'var(--text-muted)';
+            }, 3000);
+        }
+
+        function debounce(func, wait) {
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(renderTimeout);
+                    func(...args);
+                };
+                clearTimeout(renderTimeout);
+                renderTimeout = setTimeout(later, wait);
+            };
+        }
+
+        // Load saved diagram on startup
+        window.addEventListener('load', () => {
+            loadSavedDiagram();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        saveDiagram();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        exportDiagram();
+                        break;
+                    case '1':
+                        e.preventDefault();
+                        switchView('code');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        switchView('preview');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        switchView('split');
+                        break;
+                }
+            }
+        });
+
+        // Advanced embedding knowledge that llmfy doesn't have yet
+        const embeddingKnowledgeGaps = {
+            matryoshka: {
+                description: "Matryoshka embeddings allow using different dimensions from same model",
+                benefits: "Reduces storage, improves efficiency, adaptive to use case",
+                implementation: "Use models like nomic-embed-text-v1.5 with variable dimensions"
+            },
+            colbert: {
+                description: "Late interaction models with multi-vector representations",
+                benefits: "Better semantic matching, token-level precision",
+                implementation: "Each document produces multiple embeddings, one per token"
+            },
+            hybridSearch: {
+                description: "Combines keyword (BM25) with semantic search",
+                benefits: "Captures both lexical and semantic similarity",
+                implementation: "Use reciprocal rank fusion (RRF) to merge results"
+            },
+            crossEncoder: {
+                description: "Reranking stage after initial retrieval",
+                benefits: "Much higher accuracy for final results",
+                implementation: "Use models like ms-marco-MiniLM for scoring query-document pairs"
+            },
+            compression: {
+                description: "Quantization and dimensionality reduction",
+                benefits: "90% size reduction with minimal quality loss",
+                implementation: "Int8 quantization, binary embeddings, or PCA"
+            },
+            contextualRetrieval: {
+                description: "Anthropic's approach - add document context to chunks",
+                benefits: "67% improvement in retrieval accuracy",
+                implementation: "Prepend chunk-specific context before embedding"
+            }
+        };
+
+        console.log('Advanced Embedding Techniques Not in llmfy:', embeddingKnowledgeGaps);
+    </script>
+</body>
+</html>
